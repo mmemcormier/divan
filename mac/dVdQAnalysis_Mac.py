@@ -2,7 +2,7 @@
 Title: Neware Analysis Tool
 Created on Monday, May 10, 2021
 @author: John Corsten
-last modified : July 8, 2021, 11:11 AM
+last modified : July 13, 2021, 5:20 PM
 """
 from doctest import master
 
