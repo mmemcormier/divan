@@ -784,9 +784,10 @@ if fullData is not None:
                     display_parameter_plots = st.checkbox("Display fit parameters vs. cycle number")
 
                 with intermediate_fits:
-                    export_int_plots = st.checkbox("Export Plots Over Intervals?")
-                    export_plot_bool = export_int_plots
-
+                    #============== Windows only ================#
+                    #export_int_plots = st.checkbox("Export Plots Over Intervals?")
+                    #export_plot_bool = export_int_plots
+                    #============================================#
                     freq_int_plots = st.number_input("Interval of intermediate fit plots", value=5, min_value=1)
                     display_int_plots = st.checkbox("Display intermediate fits")
                     display_plots_bool = display_int_plots

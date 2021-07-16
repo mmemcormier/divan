@@ -2,7 +2,7 @@
 Title: Neware Analysis Tool
 Created on Monday, May 10, 2021
 @author: John Corsten
-last modified : July 8, 2021, 11:11 AM
+last modified : July 13, 2021, 5:20 PM
 """
 from doctest import master
 
@@ -330,11 +330,11 @@ def temp_plotting(Q_measured, dVdQ_measured, cycle_number, save_plot, display_pl
 
     # =================================================================#
     # Windows only feature #
-    if save_plot:
-        if dirname is None:
-            export_png(p, filename="cycle_{}_fit.png".format(cycle_number))
-        else:
-            export_png(p, filename=dirname + "cycle_{}_fit.png".format(cycle_number))
+    #if save_plot:
+    #    if dirname is None:
+    #        export_png(p, filename="cycle_{}_fit.png".format(cycle_number))
+    #    else:
+    #        export_png(p, filename=dirname + "cycle_{}_fit.png".format(cycle_number))
     # =================================================================#
 
 
@@ -710,12 +710,16 @@ if fullData is not None:
                     display_parameter_plots = st.checkbox("Display fit parameters vs. cycle number")
 
                 with intermediate_fits:
-                    export_int_plots = st.checkbox("Export Plots Over Intervals?")
-                    export_plot_bool = export_int_plots
+
+                    # ============== Windows only feature==========#
+                    #export_int_plots = st.checkbox("Export Plots Over Intervals?")
+                    #export_plot_bool = export_int_plots
+                    # =============================================#
 
                     freq_int_plots = st.number_input("Interval of intermediate fit plots", value=5, min_value=1)
                     display_int_plots = st.checkbox("Display intermediate fits")
                     display_plots_bool = display_int_plots
+
 
                 with multi_fit_expander:
                     adjust_range_fit = st.checkbox("Adjust Range Fit Bounds?")
@@ -1038,7 +1042,7 @@ if fullData is not None:
             dvdq_xlim = st.number_input('dV/dQ X-limit', value=max(max(Q), max(Q_meas)))
             st.write("Y axis range:")
             dvdq_ymin = st.number_input('dV/dQ Y-minimum')
-            dvdq_ylim = st.number_input('dV/dQ Y-limit', value=0.01)
+            dvdq_ylim = st.number_input('dV/dQ Y-limit', value=0.015)
 
         with dqdv_plot_expander:
             # Controls for the plot's axes

@@ -8,8 +8,8 @@ call pip install scipy==1.5.2
 call pip install matplotlib
 pip install tk
 pip install bokeh==2.0.2
-conda install selenium gecko driver -c conda-forge
-conda install selenium python-chromedriver-binary -c conda-forge
+:conda install selenium gecko driver -c conda-forge
+:conda install selenium python-chromedriver-binary -c conda-forge
 
 
 streamlit run dVdQAnalysis_Windows.py
