@@ -2,12 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="4bcf82ee-e01f-4bda-97b5-ad0054e07ff3" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/linux/SessionState.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/linux/dVdQAnalysis_Linux.py" beforeDir="false" afterPath="$PROJECT_DIR$/linux/dVdQAnalysis_Linux.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mac/dVdQAnalysis_Mac.py" beforeDir="false" afterPath="$PROJECT_DIR$/mac/dVdQAnalysis_Mac.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tools/example_notebooks/nvx_file_parser.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/tools/example_notebooks/nvx_file_parser.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mac/SessionState.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/win/SessionState.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/win/dVdQAnalysis_windows.py" beforeDir="false" afterPath="$PROJECT_DIR$/win/dVdQAnalysis_windows.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/win/run_dVdQAnalysis.bat" beforeDir="false" afterPath="$PROJECT_DIR$/win/run_dVdQAnalysis.bat" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,11 +42,26 @@
       <option name="presentableId" value="Default" />
       <updated>1626217551723</updated>
       <workItem from="1626217553724" duration="4769000" />
-      <workItem from="1626461734781" duration="727000" />
+      <workItem from="1626461734781" duration="884000" />
+      <workItem from="1626703045126" duration="5000" />
+      <workItem from="1626716773717" duration="1564000" />
+      <workItem from="1626901436995" duration="939000" />
+      <workItem from="1627390019594" duration="400000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
 </project>

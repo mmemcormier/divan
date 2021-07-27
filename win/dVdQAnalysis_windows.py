@@ -20,11 +20,11 @@ from fractions import Fraction
 from scipy.interpolate import UnivariateSpline
 from pathlib import Path
 from scipy.optimize import curve_fit
-import SessionState
+#import SessionState
 from scipy.signal import savgol_filter
 from bokeh.io import export_png
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 
 
 st.title("Neware Analysis")
@@ -303,8 +303,8 @@ def least_squares_fit(Q_ls, dVdQ_ls, ps, ns, pm, nm, ps_min, ns_min, pm_min, nm_
 
 
 def temp_plotting(Q_measured, dVdQ_measured, cycle_number, save_plot, display_plot):
-    dVdQ_calc = dVdQ_fitting(Q_measured, state.kwargs["slip_pos"], state.kwargs["slip_neg"],
-                             state.kwargs["m_pos"], state.kwargs["m_neg"])
+    dVdQ_calc = dVdQ_fitting(Q_measured, st.session_state["slip_pos"], st.session_state["slip_neg"],
+                             st.session_state["m_pos"], st.session_state["m_neg"])
 
     Q = Q_measured
 
@@ -330,11 +330,11 @@ def temp_plotting(Q_measured, dVdQ_measured, cycle_number, save_plot, display_pl
 
     # =================================================================#
     # Windows only feature #
-    #if save_plot:
-    #    if dirname is None:
-    #        export_png(p, filename="cycle_{}_fit.png".format(cycle_number))
-    #    else:
-    #        export_png(p, filename=dirname + "cycle_{}_fit.png".format(cycle_number))
+    if save_plot:
+        if dirname is None:
+            export_png(p, filename="cycle_{}_fit.png".format(cycle_number))
+        else:
+            export_png(p, filename=dirname + "cycle_{}_fit.png".format(cycle_number))
     # =================================================================#
 
 
@@ -408,19 +408,93 @@ if fullData is not None:
             st.write("Plotting cycle {0} with rate {1}:".format(cycnum, rate))
 
             # Creating a dictionary to pass to the session state as initial values
-            dic = {"m_pos": 1.0, "m_neg": 1.0, "slip_pos": 0.0, "slip_neg": 0.0,
-                   "slip_neg_min": -45, "slip_neg_max": 5, "slip_neg_spacing": 2.0,
-                   "slip_pos_min": -45, "slip_pos_max": 5, "slip_pos_spacing": 2.0,
-                   "mass_neg_min": 0.90, "mass_neg_max": 1.4, "mass_neg_spacing": 0.1,
-                   "mass_pos_min": 0.90, "mass_pos_max": 1.4, "mass_pos_spacing": 0.1,
-                   "fit_min": int(min(Q_meas)), "fit_max": int(max(Q_meas)),
-                   "fit_cap_min_i": int(min(Q_meas)), "fit_cap_max_i": int(max(Q_meas)),
-                   "fit_cap_min_f": int(min(Q_meas)), "fit_cap_max_f": int(max(Q_meas)),
-                   "window_size": 15, "polyorder": 4,"dirname": ""}
+            #st.session_state = {"m_pos": 1.0, "m_neg": 1.0, "slip_pos": 0.0, "slip_neg": 0.0,
+            #       "slip_neg_min": -45, "slip_neg_max": 5, "slip_neg_spacing": 2.0,
+            #       "slip_pos_min": -45, "slip_pos_max": 5, "slip_pos_spacing": 2.0,
+            #       "mass_neg_min": 0.90, "mass_neg_max": 1.4, "mass_neg_spacing": 0.1,
+            #       "mass_pos_min": 0.90, "mass_pos_max": 1.4, "mass_pos_spacing": 0.1,
+            #       "fit_min": int(min(Q_meas)), "fit_max": int(max(Q_meas)),
+            #       "fit_cap_min_i": int(min(Q_meas)), "fit_cap_max_i": int(max(Q_meas)),
+            #       "fit_cap_min_f": int(min(Q_meas)), "fit_cap_max_f": int(max(Q_meas)),
+            #       "window_size": 15, "polyorder": 4,"dirname": ""}
+
+            if 'fit_cap_min_i' not in st.session_state:
+                st.session_state["fit_cap_min_i"] = int(min(Q_meas))
+
+            if 'fit_cap_max_i' not in st.session_state:
+                st.session_state["fit_cap_max_i"] = int(max(Q_meas))
+
+            if 'fit_cap_min_f' not in st.session_state:
+                st.session_state["fit_cap_min_f"] = int(min(Q_meas))
+
+            if 'fit_cap_max_f' not in st.session_state:
+                st.session_state["fit_cap_max_f"] = int(max(Q_meas))
+
+            if 'fit_min' not in st.session_state:
+                st.session_state["fit_min"] = int(min(Q_meas))
+
+            if 'fit_max' not in st.session_state:
+                st.session_state["fit_max"] = int(max(Q_meas))
+
+            if 'window_size' not in st.session_state:
+                st.session_state["window_size"] = 15
+
+            if 'polyorder' not in st.session_state:
+                st.session_state["polyorder"] = 4
+
+            if 'dirname' not in st.session_state:
+                st.session_state["dirname"] = ""
+
+            if 'm_pos' not in st.session_state:
+                st.session_state["m_pos"] = 1.0
+
+            if 'm_neg' not in st.session_state:
+                st.session_state["m_neg"] = 1.0
+
+            if 'slip_pos' not in st.session_state:
+                st.session_state["slip_pos"] = 0.0
+
+            if 'slip_neg' not in st.session_state:
+                st.session_state["slip_neg"] = 0.0
+
+            if 'slip_neg_min' not in st.session_state:
+                st.session_state["slip_neg_min"] = -45
+
+            if 'slip_neg_max' not in st.session_state:
+                st.session_state["slip_neg_max"] = 5
+
+            if 'slip_neg_spacing' not in st.session_state:
+                st.session_state["slip_neg_spacing"] = 2.0
+
+            if 'slip_pos_min' not in st.session_state:
+                st.session_state["slip_pos_min"] = -45
+
+            if 'slip_pos_max' not in st.session_state:
+                st.session_state["slip_pos_max"] = 5
+
+            if 'slip_pos_spacing' not in st.session_state:
+                st.session_state["slip_pos_spacing"] = 2.0
+
+            if 'mass_neg_min' not in st.session_state:
+                st.session_state["mass_neg_min"] = 0.9
+
+            if 'mass_neg_max' not in st.session_state:
+                st.session_state["mass_neg_max"] = 1.4
+
+            if 'mass_neg_spacing' not in st.session_state:
+                st.session_state["mass_neg_spacing"] = 0.1
+
+            if 'mass_pos_min' not in st.session_state:
+                st.session_state["mass_pos_min"] = 0.9
+
+            if 'mass_pos_max' not in st.session_state:
+                st.session_state["mass_pos_max"] = 1.4
+
+            if 'mass_pos_spacing' not in st.session_state:
+                st.session_state["mass_pos_spacing"] = 0.1
 
 
-            # Creating a session state
-            state = SessionState.get(kwargs=dic)
+
 
             # ========================================================================== #
             # Windows only feature #
@@ -437,7 +511,7 @@ if fullData is not None:
                     dirname = None
                     if folder_button:
                         dirname = st.text_input('Selected folder:', filedialog.askdirectory(master=root))
-                        state.kwargs["dirname"] = dirname
+                        st.session_state["dirname"] = dirname
 
             # ========================================================================== #
 
@@ -446,17 +520,17 @@ if fullData is not None:
 
             with smoothing_expander:
                 smooth_cbox = st.checkbox('Smooth measured data', value=True)
-                state.kwargs["window_size"] = st.slider(label="Window size", min_value=3, max_value=31,
-                                                        value=state.kwargs["window_size"], step=2)
+                st.session_state["window_size"] = st.slider(label="Window size", min_value=3, max_value=31,
+                                                        value=st.session_state["window_size"], step=2)
 
-                state.kwargs["polyorder"] = st.number_input(label="Smoothing polynomial order "
+                st.session_state["polyorder"] = st.number_input(label="Smoothing polynomial order "
                                                                   "(must be less than window size)", value=
-                state.kwargs["polyorder"], min_value=1, max_value=state.kwargs["window_size"] - 1)
+                st.session_state["polyorder"], min_value=1, max_value=st.session_state["window_size"] - 1)
 
             # Only smooths measured data if checkbox is selected
             if smooth_cbox:
-                dVdQ_meas = smooth_meas(dVdQ_meas, state.kwargs["window_size"], state.kwargs["polyorder"])
-                dQdV_meas = smooth_meas(dQdV_meas, state.kwargs["window_size"], state.kwargs["polyorder"])
+                dVdQ_meas = smooth_meas(dVdQ_meas, st.session_state["window_size"], st.session_state["polyorder"])
+                dQdV_meas = smooth_meas(dQdV_meas, st.session_state["window_size"], st.session_state["polyorder"])
 
             # Interpolating the reference data for calculating the dV/dQ curve
             v_n, q_n, v_p, q_p = read_ref(posData, negData)
@@ -470,83 +544,83 @@ if fullData is not None:
                 st.markdown("""### Negative Slippage Controls""")
                 ns_c1, ns_c2 = st.beta_columns(2)
                 with ns_c1:
-                    slip_neg_min = st.text_input(label="Neg. Slippage Minumum", value=state.kwargs["slip_neg_min"])
-                    state.kwargs["slip_neg_min"] = float(slip_neg_min)
+                    slip_neg_min = st.text_input(label="Neg. Slippage Minumum", value=st.session_state["slip_neg_min"])
+                    st.session_state["slip_neg_min"] = float(slip_neg_min)
                 with ns_c2:
-                    slip_neg_max = st.text_input(label="Neg. Slippage Maximum", value=state.kwargs["slip_neg_max"])
-                    state.kwargs["slip_neg_max"] = float(slip_neg_max)
+                    slip_neg_max = st.text_input(label="Neg. Slippage Maximum", value=st.session_state["slip_neg_max"])
+                    st.session_state["slip_neg_max"] = float(slip_neg_max)
 
-                state.kwargs["slip_neg_spacing"] = st.number_input(label="Negative slippage grid spacing",
-                                                                   value=state.kwargs["slip_neg_spacing"])
+                st.session_state["slip_neg_spacing"] = st.number_input(label="Negative slippage grid spacing",
+                                                                   value=st.session_state["slip_neg_spacing"])
 
                 st.markdown("""### Positive Slippage Controls""")
                 ps_c1, ps_c2 = st.beta_columns(2)
                 with ps_c1:
-                    slip_pos_min = st.text_input(label="Pos. Slippage Minumum", value=state.kwargs["slip_pos_min"])
-                    state.kwargs["slip_pos_min"] = float(slip_neg_min)
+                    slip_pos_min = st.text_input(label="Pos. Slippage Minumum", value=st.session_state["slip_pos_min"])
+                    st.session_state["slip_pos_min"] = float(slip_neg_min)
                 with ps_c2:
-                    slip_pos_max = st.text_input(label="Pos. Slippage Maximum", value=state.kwargs["slip_pos_max"])
-                    state.kwargs["slip_pos_max"] = float(slip_pos_max)
+                    slip_pos_max = st.text_input(label="Pos. Slippage Maximum", value=st.session_state["slip_pos_max"])
+                    st.session_state["slip_pos_max"] = float(slip_pos_max)
 
-                state.kwargs["slip_pos_spacing"] = st.number_input(label="Positive slippage grid spacing",
-                                                                   value=state.kwargs["slip_pos_spacing"])
+                st.session_state["slip_pos_spacing"] = st.number_input(label="Positive slippage grid spacing",
+                                                                   value=st.session_state["slip_pos_spacing"])
 
                 st.markdown("""### Negative Mass Controls""")
                 nm_c1, nm_c2 = st.beta_columns(2)
                 with nm_c1:
-                    mass_neg_min = st.text_input(label="Neg. Mass Minumum", value=state.kwargs["mass_neg_min"])
-                    state.kwargs["mass_neg_min"] = float(mass_neg_min)
+                    mass_neg_min = st.text_input(label="Neg. Mass Minumum", value=st.session_state["mass_neg_min"])
+                    st.session_state["mass_neg_min"] = float(mass_neg_min)
 
                 with nm_c2:
-                    mass_neg_max = st.text_input(label="Neg. Mass Maximum", value=state.kwargs["mass_neg_max"])
-                    state.kwargs["mass_neg_max"] = float(mass_neg_max)
+                    mass_neg_max = st.text_input(label="Neg. Mass Maximum", value=st.session_state["mass_neg_max"])
+                    st.session_state["mass_neg_max"] = float(mass_neg_max)
 
-                state.kwargs["mass_neg_spacing"] = st.number_input(label="Negative active mass grid spacing",
-                                                                   value=state.kwargs["mass_neg_spacing"])
+                st.session_state["mass_neg_spacing"] = st.number_input(label="Negative active mass grid spacing",
+                                                                   value=st.session_state["mass_neg_spacing"])
 
                 st.markdown("""### Positive Mass Controls""")
                 pm_c1, pm_c2 = st.beta_columns(2)
                 with pm_c1:
-                    mass_pos_min = st.text_input(label="Pos. Mass Minumum", value=state.kwargs["mass_pos_min"])
-                    state.kwargs["mass_pos_min"] = float(mass_pos_min)
+                    mass_pos_min = st.text_input(label="Pos. Mass Minumum", value=st.session_state["mass_pos_min"])
+                    st.session_state["mass_pos_min"] = float(mass_pos_min)
                 with pm_c2:
-                    mass_pos_max = st.text_input(label="Pos. Mass Maximum", value=state.kwargs["mass_pos_max"])
-                    state.kwargs["pos_mass_max"] = float(mass_pos_max)
+                    mass_pos_max = st.text_input(label="Pos. Mass Maximum", value=st.session_state["mass_pos_max"])
+                    st.session_state["pos_mass_max"] = float(mass_pos_max)
 
-                state.kwargs["mass_pos_spacing"] = st.number_input(label="Positive Active Mass Grid Spacing",
-                                                                   value=state.kwargs["mass_pos_spacing"])
-
-
-
-                #slip_neg_range = st.slider("Negative Slipping Range", -100, 50, (state.kwargs["slip_neg_min"],
-                #                                                                 state.kwargs["slip_neg_max"]), 1)
-                #state.kwargs["slip_neg_spacing"] = st.number_input(label="Negative slippage grid spacing",
-                #                                                   value=state.kwargs["slip_neg_spacing"])
-                #state.kwargs["slip_neg_min"] = slip_neg_range[0]
-                #state.kwargs["slip_neg_max"] = slip_neg_range[1]
+                st.session_state["mass_pos_spacing"] = st.number_input(label="Positive Active Mass Grid Spacing",
+                                                                   value=st.session_state["mass_pos_spacing"])
 
 
-                #slip_pos_range = st.slider("Positive Slippage Range", -100, 50, (state.kwargs["slip_pos_min"],
-                #                                                                 state.kwargs["slip_pos_max"]), 1)
-                #state.kwargs["slip_pos_spacing"] = st.number_input(label="Positive slippage grid spacing",
-                #                                                   value=state.kwargs["slip_pos_spacing"])
-                #state.kwargs["slip_pos_min"] = slip_pos_range[0]
-                #state.kwargs["slip_pos_max"] = slip_pos_range[1]
 
-                #mass_neg_range = st.slider("Active Negative Mass Range", 0.1, 2.0, (state.kwargs["mass_neg_min"],
-                #                                                                    state.kwargs["mass_neg_max"]),
+                #slip_neg_range = st.slider("Negative Slipping Range", -100, 50, (st.session_state["slip_neg_min"],
+                #                                                                 st.session_state["slip_neg_max"]), 1)
+                #st.session_state["slip_neg_spacing"] = st.number_input(label="Negative slippage grid spacing",
+                #                                                   value=st.session_state["slip_neg_spacing"])
+                #st.session_state["slip_neg_min"] = slip_neg_range[0]
+                #st.session_state["slip_neg_max"] = slip_neg_range[1]
+
+
+                #slip_pos_range = st.slider("Positive Slippage Range", -100, 50, (st.session_state["slip_pos_min"],
+                #                                                                 st.session_state["slip_pos_max"]), 1)
+                #st.session_state["slip_pos_spacing"] = st.number_input(label="Positive slippage grid spacing",
+                #                                                   value=st.session_state["slip_pos_spacing"])
+                #st.session_state["slip_pos_min"] = slip_pos_range[0]
+                #st.session_state["slip_pos_max"] = slip_pos_range[1]
+
+                #mass_neg_range = st.slider("Active Negative Mass Range", 0.1, 2.0, (st.session_state["mass_neg_min"],
+                #                                                                    st.session_state["mass_neg_max"]),
                 #                           0.1)
-                #state.kwargs["mass_neg_spacing"] = st.number_input(label="Negative active mass grid spacing",
-                #                                                   value=state.kwargs["mass_neg_spacing"])
-                #state.kwargs["mass_neg_min"] = mass_neg_range[0]
-                #state.kwargs["mass_neg_max"] = mass_neg_range[1]
+                #st.session_state["mass_neg_spacing"] = st.number_input(label="Negative active mass grid spacing",
+                #                                                   value=st.session_state["mass_neg_spacing"])
+                #st.session_state["mass_neg_min"] = mass_neg_range[0]
+                #st.session_state["mass_neg_max"] = mass_neg_range[1]
                 #
-                #mass_pos_range = st.slider("Active Positive Mass Range", 0.1, 2.0, (state.kwargs["mass_pos_min"],
-                #                                                                    state.kwargs["mass_pos_max"]),
+                #mass_pos_range = st.slider("Active Positive Mass Range", 0.1, 2.0, (st.session_state["mass_pos_min"],
+                #                                                                    st.session_state["mass_pos_max"]),
                 #                           0.1)
 
-                #state.kwargs["mass_pos_min"] = mass_pos_range[0]
-                #state.kwargs["mass_pos_max"] = mass_pos_range[1]
+                #st.session_state["mass_pos_min"] = mass_pos_range[0]
+                #st.session_state["mass_pos_max"] = mass_pos_range[1]
 
             if range_or_individual == "Individual":
                 # Expander for specifying the capacity range over which the fit will work
@@ -555,13 +629,13 @@ if fullData is not None:
                 with fit_range_expander:
                     fit_range_cbox = st.checkbox('Fit over specified range')
                     fit_range = st.slider("Fit Capacity Range", int(min(Q_meas)), int(max(Q_meas)),
-                                                  (int(state.kwargs["fit_min"]), int(state.kwargs["fit_max"])), 1)
+                                                  (int(st.session_state["fit_min"]), int(st.session_state["fit_max"])), 1)
 
-                state.kwargs["fit_min"] = fit_range[0]
-                state.kwargs["fit_max"] = fit_range[1]
+                st.session_state["fit_min"] = fit_range[0]
+                st.session_state["fit_max"] = fit_range[1]
 
                 # Indices over which the fit will be calculated
-                fit_inds = np.where((Q_meas >= state.kwargs["fit_min"]) & (Q_meas <= state.kwargs["fit_max"]))[0]
+                fit_inds = np.where((Q_meas >= st.session_state["fit_min"]) & (Q_meas <= st.session_state["fit_max"]))[0]
 
                 if fit_range_cbox:
                     Q_meas_fit = Q_meas[fit_inds]
@@ -590,69 +664,69 @@ if fullData is not None:
                     ls_spinner = st.spinner("Least squares in progress")
                     with ls_spinner:
                         try:
-                            [state.kwargs["slip_pos"], state.kwargs["slip_neg"], state.kwargs["m_pos"],
-                             state.kwargs["m_neg"]] = \
-                                least_squares_fit(Q_meas_fit, dVdQ_meas_fit, state.kwargs["slip_pos"],
-                                                  state.kwargs["slip_neg"], state.kwargs["m_pos"],
-                                                  state.kwargs["m_neg"],
+                            [st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"],
+                             st.session_state["m_neg"]] = \
+                                least_squares_fit(Q_meas_fit, dVdQ_meas_fit, st.session_state["slip_pos"],
+                                                  st.session_state["slip_neg"], st.session_state["m_pos"],
+                                                  st.session_state["m_neg"],
                                                   -100., -100., 0.5, 0.5, 50., 50., 2., 2.)
 
-                            dVdQ_calc = dVdQ_fitting(Q_meas, [state.kwargs["slip_pos"], state.kwargs["slip_neg"],
-                                                              state.kwargs["m_pos"], state.kwargs["m_neg"]])
+                            dVdQ_calc = dVdQ_fitting(Q_meas, [st.session_state["slip_pos"], st.session_state["slip_neg"],
+                                                              st.session_state["m_pos"], st.session_state["m_neg"]])
                             Q = Q_meas
 
                         except:
                             fit_button = False
 
                 elif brute_fit_button:
-                    dVdQ_calc, state.kwargs["m_neg"], state.kwargs["m_pos"], state.kwargs["slip_neg"], \
-                    state.kwargs["slip_pos"] = brute_force_fit(state.kwargs["m_pos"], state.kwargs["mass_pos_min"],
-                                                               state.kwargs["mass_pos_max"],
-                                                               state.kwargs["mass_pos_spacing"],
-                                                               state.kwargs["m_neg"], state.kwargs["mass_neg_min"],
-                                                               state.kwargs["mass_neg_max"],
-                                                               state.kwargs["mass_neg_spacing"],
-                                                               state.kwargs["slip_pos"], state.kwargs["slip_pos_min"],
-                                                               state.kwargs["slip_pos_max"],
-                                                               state.kwargs["slip_pos_spacing"],
-                                                               state.kwargs["slip_neg"], state.kwargs["slip_neg_min"],
-                                                               state.kwargs["slip_neg_max"],
-                                                               state.kwargs["slip_neg_spacing"],
+                    dVdQ_calc, st.session_state["m_neg"], st.session_state["m_pos"], st.session_state["slip_neg"], \
+                    st.session_state["slip_pos"] = brute_force_fit(st.session_state["m_pos"], st.session_state["mass_pos_min"],
+                                                               st.session_state["mass_pos_max"],
+                                                               st.session_state["mass_pos_spacing"],
+                                                               st.session_state["m_neg"], st.session_state["mass_neg_min"],
+                                                               st.session_state["mass_neg_max"],
+                                                               st.session_state["mass_neg_spacing"],
+                                                               st.session_state["slip_pos"], st.session_state["slip_pos_min"],
+                                                               st.session_state["slip_pos_max"],
+                                                               st.session_state["slip_pos_spacing"],
+                                                               st.session_state["slip_neg"], st.session_state["slip_neg_min"],
+                                                               st.session_state["slip_neg_max"],
+                                                               st.session_state["slip_neg_spacing"],
                                                                dVdQ_meas_fit, Q_meas_fit)
 
-                    dVdQ_calc = dVdQ_fitting(Q_meas, state.kwargs["slip_pos"], state.kwargs["slip_neg"],
-                                             state.kwargs["m_pos"], state.kwargs["m_neg"])
+                    dVdQ_calc = dVdQ_fitting(Q_meas, st.session_state["slip_pos"], st.session_state["slip_neg"],
+                                             st.session_state["m_pos"], st.session_state["m_neg"])
 
                     Q = Q_meas
 
                 elif brute_and_ls_button:
-                    dVdQ_calc, state.kwargs["m_neg"], state.kwargs["m_pos"], state.kwargs["slip_neg"], \
-                    state.kwargs["slip_pos"] = brute_force_fit(state.kwargs["m_pos"], state.kwargs["mass_pos_min"],
-                                                               state.kwargs["mass_pos_max"],
-                                                               state.kwargs["mass_pos_spacing"],
-                                                               state.kwargs["m_neg"], state.kwargs["mass_neg_min"],
-                                                               state.kwargs["mass_neg_max"],
-                                                               state.kwargs["mass_neg_spacing"],
-                                                               state.kwargs["slip_pos"], state.kwargs["slip_pos_min"],
-                                                               state.kwargs["slip_pos_max"],
-                                                               state.kwargs["slip_pos_spacing"],
-                                                               state.kwargs["slip_neg"], state.kwargs["slip_neg_min"],
-                                                               state.kwargs["slip_neg_max"],
-                                                               state.kwargs["slip_neg_spacing"],
+                    dVdQ_calc, st.session_state["m_neg"], st.session_state["m_pos"], st.session_state["slip_neg"], \
+                    st.session_state["slip_pos"] = brute_force_fit(st.session_state["m_pos"], st.session_state["mass_pos_min"],
+                                                               st.session_state["mass_pos_max"],
+                                                               st.session_state["mass_pos_spacing"],
+                                                               st.session_state["m_neg"], st.session_state["mass_neg_min"],
+                                                               st.session_state["mass_neg_max"],
+                                                               st.session_state["mass_neg_spacing"],
+                                                               st.session_state["slip_pos"], st.session_state["slip_pos_min"],
+                                                               st.session_state["slip_pos_max"],
+                                                               st.session_state["slip_pos_spacing"],
+                                                               st.session_state["slip_neg"], st.session_state["slip_neg_min"],
+                                                               st.session_state["slip_neg_max"],
+                                                               st.session_state["slip_neg_spacing"],
                                                                dVdQ_meas_fit, Q_meas_fit)
                     # Sometimes least squares can't find any better parameters and throws an error, hence why a "try" is used
                     try:
-                        [state.kwargs["slip_pos"], state.kwargs["slip_neg"], state.kwargs["m_pos"],
-                         state.kwargs["m_neg"]] = \
-                            least_squares_fit(Q_meas_fit, dVdQ_meas_fit, state.kwargs["slip_pos"],
-                                              state.kwargs["slip_neg"], state.kwargs["m_pos"],
-                                              state.kwargs["m_neg"],
+                        [st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"],
+                         st.session_state["m_neg"]] = \
+                            least_squares_fit(Q_meas_fit, dVdQ_meas_fit, st.session_state["slip_pos"],
+                                              st.session_state["slip_neg"], st.session_state["m_pos"],
+                                              st.session_state["m_neg"],
                                               -100., -100., 0.5, 0.5, 50., 50., 2., 2.)
 
                         dVdQ_calc = dVdQ_fitting(Q_meas,
-                                                 [state.kwargs["slip_pos"], state.kwargs["slip_neg"],
-                                                  state.kwargs["m_pos"],
-                                                  state.kwargs["m_neg"]])
+                                                 [st.session_state["slip_pos"], st.session_state["slip_neg"],
+                                                  st.session_state["m_pos"],
+                                                  st.session_state["m_neg"]])
                         Q = Q_meas
                     except:
                         Q = Q_meas
@@ -662,39 +736,39 @@ if fullData is not None:
                 # Adjustment sliders for the dVdQ analysis
                 with slider_expander:
                     # Positive active mass (g)
-                    m_pos = st.text_input("Positive Mass (g)", value=state.kwargs["m_pos"])
-                    state.kwargs["m_pos"] = float(m_pos)
+                    m_pos = st.text_input("Positive Mass (g)", value=st.session_state["m_pos"])
+                    st.session_state["m_pos"] = float(m_pos)
 
-                    m_neg = st.text_input("Negative Mass (g)", value=state.kwargs["m_neg"])
-                    state.kwargs["m_neg"] = float(m_neg)
+                    m_neg = st.text_input("Negative Mass (g)", value=st.session_state["m_neg"])
+                    st.session_state["m_neg"] = float(m_neg)
 
-                    pos_slip = st.text_input("Positive Slippage (mAh)", value=state.kwargs["slip_pos"])
-                    state.kwargs["slip_pos"] = float(pos_slip)
+                    pos_slip = st.text_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"])
+                    st.session_state["slip_pos"] = float(pos_slip)
 
-                    neg_slip = st.text_input("Negative Slippage (mAh)", value=state.kwargs["slip_neg"])
-                    state.kwargs["slip_neg"] = float(neg_slip)
+                    neg_slip = st.text_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"])
+                    st.session_state["slip_neg"] = float(neg_slip)
 
-                    #state.kwargs["m_pos"] = st.slider("Positive Mass (g)", value=float(state.kwargs["m_pos"]),
+                    #st.session_state["m_pos"]"] = st.slider("Positive Mass (g)", value=float(state.kwargs["m_pos),
                     #                                  min_value=0.1, max_value=2.0)
                     # Negative active mass (g)
-                    #state.kwargs["m_neg"] = st.slider("Negative Mass (g)", value=float(state.kwargs["m_neg"]),
+                    #st.session_state["m_neg"]"] = st.slider("Negative Mass (g)", value=float(state.kwargs["m_neg),
                     #                                  min_value=0.1, max_value=2.0)
                     # Positive slippage (mAh)
-                    #state.kwargs["slip_pos"] = st.slider("Positive Slippage (mAh)", min_value=-100.0,
-                    #                                     value=float(state.kwargs["slip_pos"]), max_value=50.0)
+                    #st.session_state["slip_pos"] = st.slider("Positive Slippage (mAh)", min_value=-100.0,
+                    #                                     value=float(st.session_state["slip_pos"]), max_value=50.0)
                     # Negative slippage (mAh)
-                    #state.kwargs["slip_neg"] = st.slider("Negative Slippage (mAh)",
-                    #                                     value=float(state.kwargs["slip_neg"]), min_value=-100.0,
+                    #st.session_state["slip_neg"] = st.slider("Negative Slippage (mAh)",
+                    #                                     value=float(st.session_state["slip_neg"]), min_value=-100.0,
                     #                                     max_value=50.0)
 
                 # An "if not" had to be used instead of an else because the sliders would only behave properly if they
                 #   followed the first if statement and preceded the next!
 
                 if not fit_button and not brute_fit_button:
-                    Q, dVdQ_calc = dVdQ_c(state.kwargs["slip_pos"], state.kwargs["slip_neg"], state.kwargs["m_pos"],
-                                          state.kwargs["m_neg"])
-                    V, dQdV_calc = dQdV_c(state.kwargs["slip_pos"], state.kwargs["slip_neg"], state.kwargs["m_pos"],
-                                          state.kwargs["m_neg"])
+                    Q, dVdQ_calc = dVdQ_c(st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"],
+                                          st.session_state["m_neg"])
+                    V, dQdV_calc = dQdV_c(st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"],
+                                          st.session_state["m_neg"])
 
             if range_or_individual == "Range":
 
@@ -710,16 +784,13 @@ if fullData is not None:
                     display_parameter_plots = st.checkbox("Display fit parameters vs. cycle number")
 
                 with intermediate_fits:
-
-                    # ============== Windows only feature==========#
-                    #export_int_plots = st.checkbox("Export Plots Over Intervals?")
-                    #export_plot_bool = export_int_plots
-                    # =============================================#
-
+                    #============== Windows only ================#
+                    export_int_plots = st.checkbox("Export Plots Over Intervals?")
+                    export_plot_bool = export_int_plots
+                    #============================================#
                     freq_int_plots = st.number_input("Interval of intermediate fit plots", value=5, min_value=1)
                     display_int_plots = st.checkbox("Display intermediate fits")
                     display_plots_bool = display_int_plots
-
 
                 with multi_fit_expander:
                     adjust_range_fit = st.checkbox("Adjust Range Fit Bounds?")
@@ -739,13 +810,13 @@ if fullData is not None:
                             fit_col_i_1, fit_col_i_2 = st.beta_columns(2)
 
                             with fit_col_i_1:
-                                state.kwargs["fit_cap_min_i"] = int(st.text_input(label="Minimum capacity (First Cycle)", value=state.kwargs["fit_cap_min_i"]))
+                                st.session_state["fit_cap_min_i"] = int(st.text_input(label="Minimum capacity (First Cycle)", value=st.session_state["fit_cap_min_i"]))
 
                             with fit_col_i_2:
-                                state.kwargs["fit_cap_max_i"] = int(st.text_input(label="Maximum capacity (First Cycle)", value=state.kwargs["fit_cap_max_i"]))
+                                st.session_state["fit_cap_max_i"] = int(st.text_input(label="Maximum capacity (First Cycle)", value=st.session_state["fit_cap_max_i"]))
 
-                            state.kwargs["fit_min"] = state.kwargs["fit_cap_min_i"]
-                            state.kwargs["fit_max"] = state.kwargs["fit_cap_max_i"]
+                            st.session_state["fit_min"] = st.session_state["fit_cap_min_i"]
+                            st.session_state["fit_max"] = st.session_state["fit_cap_max_i"]
 
                         elif cap_range_radio == "Last Cycle":
                             cap_m, volt_m = nd.get_vcurve(cycnum=fit_num_range[1])
@@ -755,17 +826,17 @@ if fullData is not None:
                             fit_col_f_1, fit_col_f_2 = st.beta_columns(2)
 
                             with fit_col_f_1:
-                                state.kwargs["fit_cap_min_f"] = int(
+                                st.session_state["fit_cap_min_f"] = int(
                                     st.text_input(label="Minimum capacity (First Cycle)",
-                                                  value=state.kwargs["fit_cap_min_f"]))
+                                                  value=st.session_state["fit_cap_min_f"]))
 
                             with fit_col_f_2:
-                                state.kwargs["fit_cap_max_f"] = int(
+                                st.session_state["fit_cap_max_f"] = int(
                                     st.text_input(label="Maximum capacity (First Cycle)",
-                                                  value=state.kwargs["fit_cap_max_f"]))
+                                                  value=st.session_state["fit_cap_max_f"]))
 
-                            state.kwargs["fit_min"] = state.kwargs["fit_cap_min_f"]
-                            state.kwargs["fit_max"] = state.kwargs["fit_cap_max_f"]
+                            st.session_state["fit_min"] = st.session_state["fit_cap_min_f"]
+                            st.session_state["fit_max"] = st.session_state["fit_cap_max_f"]
 
                     file_name = st.text_input("Save parameters to .txt file with name (do not add the '.txt' suffix):")
 
@@ -783,7 +854,7 @@ if fullData is not None:
 
                 range_inds = np.where((list(cyc_nums) >= fit_num_range[0]) & (list(cyc_nums) <= fit_num_range[1]))
 
-                fit_inds = np.where((Q_meas_i >= state.kwargs["fit_cap_min_i"]) & (Q_meas_i <= state.kwargs["fit_cap_max_i"]))[0]
+                fit_inds = np.where((Q_meas_i >= st.session_state["fit_cap_min_i"]) & (Q_meas_i <= st.session_state["fit_cap_max_i"]))[0]
 
                 cap_range_first_ind = fit_inds[0]
                 cap_range_last_ind = fit_inds[-1]
@@ -801,27 +872,27 @@ if fullData is not None:
 
                 if smooth_cbox:
 
-                    dVdQ_meas_f_t = smooth_meas(dVdQ_meas_f_t, state.kwargs["window_size"],
-                                                     state.kwargs["polyorder"])
-                    dVdQ_meas_i_t = smooth_meas(dVdQ_meas_i_t, state.kwargs["window_size"],
-                                                     state.kwargs["polyorder"])
+                    dVdQ_meas_f_t = smooth_meas(dVdQ_meas_f_t, st.session_state["window_size"],
+                                                     st.session_state["polyorder"])
+                    dVdQ_meas_i_t = smooth_meas(dVdQ_meas_i_t, st.session_state["window_size"],
+                                                     st.session_state["polyorder"])
 
-                    dVdQ_meas_f = smooth_meas(dVdQ_meas_f, state.kwargs["window_size"],
-                                                   state.kwargs["polyorder"])
-                    dVdQ_meas_i = smooth_meas(dVdQ_meas_i, state.kwargs["window_size"],
-                                                   state.kwargs["polyorder"])
-                    dVdQ_meas = smooth_meas(dVdQ_meas, state.kwargs["window_size"],
-                                                   state.kwargs["polyorder"])
+                    dVdQ_meas_f = smooth_meas(dVdQ_meas_f, st.session_state["window_size"],
+                                                   st.session_state["polyorder"])
+                    dVdQ_meas_i = smooth_meas(dVdQ_meas_i, st.session_state["window_size"],
+                                                   st.session_state["polyorder"])
+                    dVdQ_meas = smooth_meas(dVdQ_meas, st.session_state["window_size"],
+                                                   st.session_state["polyorder"])
 
                 if multi_fit_button:
 
                     #=========================================================#
                     # Windows only version#
 
-                    if state.kwargs["dirname"] == "":
+                    if st.session_state["dirname"] == "":
                         file = open(file_name + ".txt", "w")
                     else:
-                        file = open(state.kwargs["dirname"][2:] + "/" + str(file_name) + ".txt", "w")
+                        file = open(st.session_state["dirname"][2:] + "/" + str(file_name) + ".txt", "w")
                     # =========================================================#
 
                     # ==========================================#
@@ -833,70 +904,70 @@ if fullData is not None:
                     file.write("Cycle Number  Negative Slippage (mAh)  Positive Slippage (mAh)  Negative Mass (g) Shift Loss (mAh)"
                                "Positive Mass (g)" + "\n")
 
-                    dVdQ_calc, state.kwargs["m_neg"], state.kwargs["m_pos"], state.kwargs["slip_neg"], \
-                    state.kwargs["slip_pos"] = brute_force_fit(state.kwargs["m_pos"],
-                                                               state.kwargs["mass_pos_min"],
-                                                               state.kwargs["mass_pos_max"],
-                                                               state.kwargs["mass_pos_spacing"],
-                                                               state.kwargs["m_neg"],
-                                                               state.kwargs["mass_neg_min"],
-                                                               state.kwargs["mass_neg_max"],
-                                                               state.kwargs["mass_neg_spacing"],
-                                                               state.kwargs["slip_pos"],
-                                                               state.kwargs["slip_pos_min"],
-                                                               state.kwargs["slip_pos_max"],
-                                                               state.kwargs["slip_pos_spacing"],
-                                                               state.kwargs["slip_neg"],
-                                                               state.kwargs["slip_neg_min"],
-                                                               state.kwargs["slip_neg_max"],
-                                                               state.kwargs["slip_neg_spacing"],
+                    dVdQ_calc, st.session_state["m_neg"], st.session_state["m_pos"], st.session_state["slip_neg"], \
+                    st.session_state["slip_pos"] = brute_force_fit(st.session_state["m_pos"],
+                                                               st.session_state["mass_pos_min"],
+                                                               st.session_state["mass_pos_max"],
+                                                               st.session_state["mass_pos_spacing"],
+                                                               st.session_state["m_neg"],
+                                                               st.session_state["mass_neg_min"],
+                                                               st.session_state["mass_neg_max"],
+                                                               st.session_state["mass_neg_spacing"],
+                                                               st.session_state["slip_pos"],
+                                                               st.session_state["slip_pos_min"],
+                                                               st.session_state["slip_pos_max"],
+                                                               st.session_state["slip_pos_spacing"],
+                                                               st.session_state["slip_neg"],
+                                                               st.session_state["slip_neg_min"],
+                                                               st.session_state["slip_neg_max"],
+                                                               st.session_state["slip_neg_spacing"],
                                                                dVdQ_meas_f_t, Q_meas_f_t)
 
                     try:
-                        state.kwargs["slip_pos"], state.kwargs["slip_neg"], state.kwargs["m_pos"], state.kwargs["m_neg"] = \
-                            least_squares_fit(Q_meas_f_t, dVdQ_meas_f_t, state.kwargs["slip_pos"], state.kwargs["slip_neg"],
-                                                  state.kwargs["m_pos"],
-                                                  state.kwargs["m_neg"], -100., -100., 0.5, 0.5, 50., 50., 2., 2.)
+                        st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], st.session_state["m_neg"] = \
+                            least_squares_fit(Q_meas_f_t, dVdQ_meas_f_t, st.session_state["slip_pos"], st.session_state["slip_neg"],
+                                                  st.session_state["m_pos"],
+                                                  st.session_state["m_neg"], -100., -100., 0.5, 0.5, 50., 50., 2., 2.)
 
                     except:
                         pass
 
-                    sp_f, sn_f, mp_f, mn_f = state.kwargs["slip_pos"], state.kwargs["slip_neg"], state.kwargs["m_pos"], \
-                                             state.kwargs["m_neg"]
+                    sp_f, sn_f, mp_f, mn_f = st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], \
+                                             st.session_state["m_neg"]
 
-                    dVdQ_calc, state.kwargs["m_neg"], state.kwargs["m_pos"], state.kwargs["slip_neg"], \
-                        state.kwargs["slip_pos"] = brute_force_fit(state.kwargs["m_pos"],
-                                                                   state.kwargs["mass_pos_min"],
-                                                                   state.kwargs["mass_pos_max"],
-                                                                   state.kwargs["mass_pos_spacing"],
-                                                                   state.kwargs["m_neg"],
-                                                                   state.kwargs["mass_neg_min"],
-                                                                   state.kwargs["mass_neg_max"],
-                                                                   state.kwargs["mass_neg_spacing"],
-                                                                   state.kwargs["slip_pos"],
-                                                                   state.kwargs["slip_pos_min"],
-                                                                   state.kwargs["slip_pos_max"],
-                                                                   state.kwargs["slip_pos_spacing"],
-                                                                   state.kwargs["slip_neg"],
-                                                                   state.kwargs["slip_neg_min"],
-                                                                   state.kwargs["slip_neg_max"],
-                                                                   state.kwargs["slip_neg_spacing"],
+                    dVdQ_calc, st.session_state["m_neg"], st.session_state["m_pos"], st.session_state["slip_neg"], \
+                        st.session_state["slip_pos"] = brute_force_fit(st.session_state["m_pos"],
+                                                                   st.session_state["mass_pos_min"],
+                                                                   st.session_state["mass_pos_max"],
+                                                                   st.session_state["mass_pos_spacing"],
+                                                                   st.session_state["m_neg"],
+                                                                   st.session_state["mass_neg_min"],
+                                                                   st.session_state["mass_neg_max"],
+                                                                   st.session_state["mass_neg_spacing"],
+                                                                   st.session_state["slip_pos"],
+                                                                   st.session_state["slip_pos_min"],
+                                                                   st.session_state["slip_pos_max"],
+                                                                   st.session_state["slip_pos_spacing"],
+                                                                   st.session_state["slip_neg"],
+                                                                   st.session_state["slip_neg_min"],
+                                                                   st.session_state["slip_neg_max"],
+                                                                   st.session_state["slip_neg_spacing"],
                                                                    dVdQ_meas_i_t, Q_meas_i_t)
 
 
                     try:
-                        state.kwargs["slip_pos"], state.kwargs["slip_neg"], state.kwargs["m_pos"], state.kwargs[
+                        st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], state.kwargs[
                             "m_neg"] = \
-                            least_squares_fit(Q_meas_i_t, dVdQ_meas_i_t, state.kwargs["slip_pos"], state.kwargs["slip_neg"],
-                                              state.kwargs["m_pos"],
-                                              state.kwargs["m_neg"],
+                            least_squares_fit(Q_meas_i_t, dVdQ_meas_i_t, st.session_state["slip_pos"], st.session_state["slip_neg"],
+                                              st.session_state["m_pos"],
+                                              st.session_state["m_neg"],
                                               -100., -100., 0.5, 0.5, 50., 50., 2., 2.)
 
                     except:
                         pass
 
-                    mp_i, mn_i, sp_i, sn_i = state.kwargs["m_pos"], state.kwargs["m_neg"], state.kwargs["slip_pos"], \
-                                             state.kwargs["slip_neg"]
+                    mp_i, mn_i, sp_i, sn_i = st.session_state["m_pos"], st.session_state["m_neg"], st.session_state["slip_pos"], \
+                                             st.session_state["slip_neg"]
 
                     dVdQ_calc_i = temp_plotting(Q_meas_i, dVdQ_meas_i, fit_num_range[0], export_plot_bool, display_plots_bool)
 
@@ -921,9 +992,9 @@ if fullData is not None:
                     m_neg_arr.append(round(mn_i, 2))
 
 
-                    min_bounds = np.linspace(state.kwargs["fit_cap_min_i"], state.kwargs["fit_cap_min_f"],
+                    min_bounds = np.linspace(st.session_state["fit_cap_min_i"], st.session_state["fit_cap_min_f"],
                                              len(range_inds[0]))[1:]
-                    max_bounds = np.linspace(state.kwargs["fit_cap_max_i"], state.kwargs["fit_cap_max_f"],
+                    max_bounds = np.linspace(st.session_state["fit_cap_max_i"], st.session_state["fit_cap_max_f"],
                                              len(range_inds[0]))[1:]
 
                     range_count = 0
@@ -943,36 +1014,36 @@ if fullData is not None:
 
 
                         if smooth_cbox:
-                            dVdQ_me_t = smooth_meas(dVdQ_me_t, state.kwargs["window_size"],
-                                                         state.kwargs["polyorder"])
-                            dVdQ_me = smooth_meas(dVdQ_me, state.kwargs["window_size"],
-                                                         state.kwargs["polyorder"])
+                            dVdQ_me_t = smooth_meas(dVdQ_me_t, st.session_state["window_size"],
+                                                         st.session_state["polyorder"])
+                            dVdQ_me = smooth_meas(dVdQ_me, st.session_state["window_size"],
+                                                         st.session_state["polyorder"])
 
                         if range_count == int(len(range_inds[0]/2)):
-                            dVdQ_calc, state.kwargs["m_neg"], state.kwargs["m_pos"], state.kwargs["slip_neg"], \
-                            state.kwargs["slip_pos"] = brute_force_fit(state.kwargs["m_pos"],
-                                                                       state.kwargs["mass_pos_min"],
-                                                                       state.kwargs["mass_pos_max"],
-                                                                       state.kwargs["mass_pos_spacing"],
-                                                                       state.kwargs["m_neg"],
-                                                                       state.kwargs["mass_neg_min"],
-                                                                       state.kwargs["mass_neg_max"],
-                                                                       state.kwargs["mass_neg_spacing"],
-                                                                       state.kwargs["slip_pos"],
-                                                                       state.kwargs["slip_pos_min"],
-                                                                       state.kwargs["slip_pos_max"],
-                                                                       state.kwargs["slip_pos_spacing"],
-                                                                       state.kwargs["slip_neg"],
-                                                                       state.kwargs["slip_neg_min"],
-                                                                       state.kwargs["slip_neg_max"],
-                                                                       state.kwargs["slip_neg_spacing"],
+                            dVdQ_calc, st.session_state["m_neg"], st.session_state["m_pos"], st.session_state["slip_neg"], \
+                            st.session_state["slip_pos"] = brute_force_fit(st.session_state["m_pos"],
+                                                                       st.session_state["mass_pos_min"],
+                                                                       st.session_state["mass_pos_max"],
+                                                                       st.session_state["mass_pos_spacing"],
+                                                                       st.session_state["m_neg"],
+                                                                       st.session_state["mass_neg_min"],
+                                                                       st.session_state["mass_neg_max"],
+                                                                       st.session_state["mass_neg_spacing"],
+                                                                       st.session_state["slip_pos"],
+                                                                       st.session_state["slip_pos_min"],
+                                                                       st.session_state["slip_pos_max"],
+                                                                       st.session_state["slip_pos_spacing"],
+                                                                       st.session_state["slip_neg"],
+                                                                       st.session_state["slip_neg_min"],
+                                                                       st.session_state["slip_neg_max"],
+                                                                       st.session_state["slip_neg_spacing"],
                                                                        dVdQ_me_t, Q_me_t)
 
                         try:
-                            state.kwargs["slip_pos"], state.kwargs["slip_neg"], state.kwargs["m_pos"], state.kwargs["m_neg"] = \
-                                least_squares_fit(Q_me_t, dVdQ_me_t, state.kwargs["slip_pos"], state.kwargs["slip_neg"],
-                                                  state.kwargs["m_pos"],
-                                                  state.kwargs["m_neg"],
+                            st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], st.session_state["m_neg"] = \
+                                least_squares_fit(Q_me_t, dVdQ_me_t, st.session_state["slip_pos"], st.session_state["slip_neg"],
+                                                  st.session_state["m_pos"],
+                                                  st.session_state["m_neg"],
                                                   min_sp, min_sn, min_mp, min_mn, max_sp, max_sn, max_mp, max_mn)
                         except:
                             pass
@@ -981,14 +1052,14 @@ if fullData is not None:
 
                             dVdQ_calc = temp_plotting(Q_me, dVdQ_me, cn, export_plot_bool, display_plots_bool)
 
-                        file.write(str(cn) + "  " + str(round(state.kwargs["slip_neg"], 2)) + "  " + str(round(state.kwargs["slip_pos"], 2)) +
+                        file.write(str(cn) + "  " + str(round(st.session_state["slip_neg"], 2)) + "  " + str(round(st.session_state["slip_pos"], 2)) +
 
-                                   "  " + str(round(state.kwargs["m_neg"], 2)) + "  " + str(round(state.kwargs["m_pos"], 2)) + "  " + str((pos_slip_arr[0] - neg_slip_arr[0]) - (round(state.kwargs["slip_pos"], 2) - round(state.kwargs["slip_neg"], 2))) + "\n")
+                                   "  " + str(round(st.session_state["m_neg"], 2)) + "  " + str(round(st.session_state["m_pos"], 2)) + "  " + str((pos_slip_arr[0] - neg_slip_arr[0]) - (round(st.session_state["slip_pos"], 2) - round(st.session_state["slip_neg"], 2))) + "\n")
 
-                        pos_slip_arr.append(round(state.kwargs["slip_pos"], 2))
-                        neg_slip_arr.append(round(state.kwargs["slip_neg"], 2))
-                        m_pos_arr.append(round(state.kwargs["m_pos"], 2))
-                        m_neg_arr.append(round(state.kwargs["m_neg"], 2))
+                        pos_slip_arr.append(round(st.session_state["slip_pos"], 2))
+                        neg_slip_arr.append(round(st.session_state["slip_neg"], 2))
+                        m_pos_arr.append(round(st.session_state["m_pos"], 2))
+                        m_neg_arr.append(round(st.session_state["m_neg"], 2))
 
 
 
@@ -1070,8 +1141,8 @@ if fullData is not None:
                    y_axis_label='dQ/dV (mAh/V)')
 
         if ((range_or_individual == "Range") and adjust_range_fit) or fit_range_cbox:
-            b = dvdq_plot.vbar(x=[(state.kwargs["fit_max"] + state.kwargs["fit_min"])/2], width=(state.kwargs["fit_max"] -
-                                                                                     state.kwargs["fit_min"]),
+            b = dvdq_plot.vbar(x=[(st.session_state["fit_max"] + st.session_state["fit_min"])/2], width=(st.session_state["fit_max"] -
+                                                                                     st.session_state["fit_min"]),
                    bottom=0, top=10, color=['grey'], alpha=0.3)
 
         if (range_or_individual == "Individual"):
