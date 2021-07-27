@@ -23,8 +23,8 @@ from scipy.optimize import curve_fit
 #import SessionState
 from scipy.signal import savgol_filter
 from bokeh.io import export_png
-#import tkinter as tk
-#from tkinter import filedialog
+from tkinter import *
+from tkinter import filedialog
 
 
 st.title("Neware Analysis")
@@ -45,7 +45,7 @@ with file_expander:
     # Windows only feature
 
     # Set up tkinter
-    root = tk.Tk()
+    root = Tk()
     root.withdraw()
 
     # Make folder picker dialog appear on top of other windows
