@@ -56,17 +56,6 @@ with file_expander:
     st.write("When you are finished selecting files, click the '-' button at the "
              "top right of this widget to minimize it.")
 
-locking_expander = st.beta_expander("Locking fit parameters")
-
-with locking_expander:
-    lock_pm = st.checkbox("Lock positive mass")
-
-    lock_nm = st.checkbox("Lock negative mass")
-
-    lock_ps = st.checkbox("Lock positive slippage")
-
-    lock_ns = st.checkbox("Lock negative slippage")
-
 # Reading in Neware data, and caching data
 @st.cache(persist=True, show_spinner=False)
 def read_data(uploaded_bytes, cell_id):
@@ -228,31 +217,26 @@ def smooth_meas(dVdQ_meas, window, polyorder):
 def brute_force_fit(m_p_i, m_p_min, m_p_max, m_p_int, m_n_i, m_n_min, m_n_max, m_n_int, s_p_i,
                     s_p_min, s_p_max, s_p_int, s_n_i, s_n_min, s_n_max, s_n_int, dVdQ_measured, Q_measured):
 
-    if not lock_pm:
-        m_p_vals= np.arange(m_p_min, m_p_max, m_p_int)
-    else:
+    if lock_pm:
         m_p_vals = [m_p_i]
-
-    if not lock_nm:
-        m_n_vals = np.arange(m_n_min, m_n_max, m_n_int)
     else:
+        m_p_vals = np.arange(m_p_min, m_p_max, m_p_int)
+
+    if lock_nm:
         m_n_vals = [m_n_i]
-
-    if not lock_ps:
-        s_p_vals = np.arange(s_p_min, s_p_max, s_p_int)
     else:
+        m_n_vals = np.arange(m_n_min, m_n_max, m_n_int)
+
+    if lock_ps:
         s_p_vals = [s_p_i]
-
-    if not lock_ns:
-        s_n_vals = np.arange(s_n_min, s_n_max, s_n_int)
     else:
+        s_p_vals = np.arange(s_p_min, s_p_max, s_p_int)
+
+    if lock_ns:
+        st.write("Hello?")
         s_n_vals = [s_n_i]
-
-
-    m_n_vals = np.arange(m_n_min, m_n_max, m_n_int)
-
-    s_p_vals = np.arange(s_p_min, s_p_max, s_p_int)
-    s_n_vals = np.arange(s_n_min, s_n_max, s_n_int)
+    else:
+        s_n_vals = np.arange(s_n_min, s_n_max, s_n_int)
 
     best_X2 = np.Inf
     best_dVdQ = []
@@ -326,21 +310,23 @@ def dVdQ_rates(newareRates):
 #@st.cache(persist=False, show_spinner=False)
 def least_squares_fit(Q_ls, dVdQ_ls, ps, ns, pm, nm, ps_min, ns_min, pm_min, nm_min, ps_max, ns_max, pm_max, nm_max):
     p0 = [ps, ns, pm, nm]
+    eps = 1e-8
+
     if lock_ps:
-        ps_min, ps_max = ps, ps
+        ps_min, ps_max = ps-eps, ps+eps
     if lock_ns:
-        ns_min, ns_max = ns, ns
+        ns_min, ns_max = ns-eps, ns+eps
     if lock_pm:
-        pm_min, pm_max = pm, pm
+        pm_min, pm_max = pm-eps, pm+eps
     if lock_nm:
-        nm_min, nm_max = nm. nm
+        nm_min, nm_max = nm-eps, nm+eps
 
     bounds = ([ps_min, ns_min, pm_min, nm_min], [ps_max, ns_max, pm_max, nm_max])
     popt, pcov = curve_fit(dVdQ_fitting, Q_ls, dVdQ_ls, p0=p0, bounds=bounds, max_nfev=1000,
                            ftol=1e-8, xtol=None, gtol=None, method='dogbox')
 
     # Setting the session state values (slider values) to the output of curve_fit
-    return popt[0], popt[1], popt[2], popt[3]
+    return round(popt[0],4), round(popt[1],4), round(popt[2],4), round(popt[3],4)
 
 
 def temp_plotting(Q_measured, dVdQ_measured, cycle_number, save_plot, display_plot):
@@ -570,6 +556,16 @@ if fullData is not None:
                 dVdQ_meas = smooth_meas(dVdQ_meas, st.session_state["window_size"], st.session_state["polyorder"])
                 dQdV_meas = smooth_meas(dQdV_meas, st.session_state["window_size"], st.session_state["polyorder"])
 
+            locking_expander = st.beta_expander("Locking fit parameters")
+
+            with locking_expander:
+                lock_pm = st.checkbox("Lock positive mass")
+
+                lock_nm = st.checkbox("Lock negative mass")
+
+                lock_ps = st.checkbox("Lock positive slippage")
+
+                lock_ns = st.checkbox("Lock negative slippage")
 
             # Interpolating the reference data for calculating the dV/dQ curve
             v_n, q_n, v_p, q_p = read_ref(posData, negData)
@@ -790,16 +786,16 @@ if fullData is not None:
 
                 with slider_expander:
                     # Positive active mass (g)
-                    st.session_state["m_pos"] = float(st.text_input("Positive Mass (g)", value=st.session_state["m_pos"]))
+                    st.session_state["m_pos"] = st.number_input("Positive Mass (g)", value=st.session_state["m_pos"])
 
 
-                    st.session_state["m_neg"] = float(st.text_input("Negative Mass (g)", value=st.session_state["m_neg"]))
+                    st.session_state["m_neg"] = st.number_input("Negative Mass (g)", value=st.session_state["m_neg"])
 
 
-                    st.session_state["slip_pos"] = float(st.text_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"]))
+                    st.session_state["slip_pos"] = st.number_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"])
 
 
-                    st.session_state["slip_neg"] = float(st.text_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"]))
+                    st.session_state["slip_neg"] = st.number_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"])
 
 
 
