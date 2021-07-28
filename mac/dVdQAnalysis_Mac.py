@@ -56,6 +56,17 @@ with file_expander:
     st.write("When you are finished selecting files, click the '-' button at the "
              "top right of this widget to minimize it.")
 
+locking_expander = st.beta_expander("Locking fit parameters")
+
+with locking_expander:
+    lock_pm = st.checkbox("Lock positive mass")
+
+    lock_nm = st.checkbox("Lock negative mass")
+
+    lock_ps = st.checkbox("Lock positive slippage")
+
+    lock_ns = st.checkbox("Lock negative slippage")
+
 # Reading in Neware data, and caching data
 @st.cache(persist=True, show_spinner=False)
 def read_data(uploaded_bytes, cell_id):
@@ -216,7 +227,28 @@ def smooth_meas(dVdQ_meas, window, polyorder):
 
 def brute_force_fit(m_p_i, m_p_min, m_p_max, m_p_int, m_n_i, m_n_min, m_n_max, m_n_int, s_p_i,
                     s_p_min, s_p_max, s_p_int, s_n_i, s_n_min, s_n_max, s_n_int, dVdQ_measured, Q_measured):
-    m_p_vals = np.arange(m_p_min, m_p_max, m_p_int)
+
+    if not lock_pm:
+        m_p_vals= np.arange(m_p_min, m_p_max, m_p_int)
+    else:
+        m_p_vals = [m_p_i]
+
+    if not lock_nm:
+        m_n_vals = np.arange(m_n_min, m_n_max, m_n_int)
+    else:
+        m_n_vals = [m_n_i]
+
+    if not lock_ps:
+        s_p_vals = np.arange(s_p_min, s_p_max, s_p_int)
+    else:
+        s_p_vals = [s_p_i]
+
+    if not lock_ns:
+        s_n_vals = np.arange(s_n_min, s_n_max, s_n_int)
+    else:
+        s_n_vals = [s_n_i]
+
+
     m_n_vals = np.arange(m_n_min, m_n_max, m_n_int)
 
     s_p_vals = np.arange(s_p_min, s_p_max, s_p_int)
@@ -294,6 +326,15 @@ def dVdQ_rates(newareRates):
 #@st.cache(persist=False, show_spinner=False)
 def least_squares_fit(Q_ls, dVdQ_ls, ps, ns, pm, nm, ps_min, ns_min, pm_min, nm_min, ps_max, ns_max, pm_max, nm_max):
     p0 = [ps, ns, pm, nm]
+    if lock_ps:
+        ps_min, ps_max = ps, ps
+    if lock_ns:
+        ns_min, ns_max = ns, ns
+    if lock_pm:
+        pm_min, pm_max = pm, pm
+    if lock_nm:
+        nm_min, nm_max = nm. nm
+
     bounds = ([ps_min, ns_min, pm_min, nm_min], [ps_max, ns_max, pm_max, nm_max])
     popt, pcov = curve_fit(dVdQ_fitting, Q_ls, dVdQ_ls, p0=p0, bounds=bounds, max_nfev=1000,
                            ftol=1e-8, xtol=None, gtol=None, method='dogbox')
@@ -493,9 +534,6 @@ if fullData is not None:
             if 'mass_pos_spacing' not in st.session_state:
                 st.session_state["mass_pos_spacing"] = 0.1
 
-
-
-
             # ========================================================================== #
             # Windows only feature #
 
@@ -531,6 +569,7 @@ if fullData is not None:
             if smooth_cbox:
                 dVdQ_meas = smooth_meas(dVdQ_meas, st.session_state["window_size"], st.session_state["polyorder"])
                 dQdV_meas = smooth_meas(dQdV_meas, st.session_state["window_size"], st.session_state["polyorder"])
+
 
             # Interpolating the reference data for calculating the dV/dQ curve
             v_n, q_n, v_p, q_p = read_ref(posData, negData)
@@ -675,6 +714,10 @@ if fullData is not None:
                                                               st.session_state["m_pos"], st.session_state["m_neg"]])
                             Q = Q_meas
 
+                            V, dQdV_calc = dQdV_c(st.session_state["slip_pos"], st.session_state["slip_neg"],
+                                                  st.session_state["m_pos"],
+                                                  st.session_state["m_neg"])
+
                         except:
                             fit_button = False
 
@@ -699,6 +742,10 @@ if fullData is not None:
 
                     Q = Q_meas
 
+                    V, dQdV_calc = dQdV_c(st.session_state["slip_pos"], st.session_state["slip_neg"],
+                                          st.session_state["m_pos"],
+                                          st.session_state["m_neg"])
+
                 elif brute_and_ls_button:
                     dVdQ_calc, st.session_state["m_neg"], st.session_state["m_pos"], st.session_state["slip_neg"], \
                     st.session_state["slip_pos"] = brute_force_fit(st.session_state["m_pos"], st.session_state["mass_pos_min"],
@@ -714,6 +761,9 @@ if fullData is not None:
                                                                st.session_state["slip_neg_max"],
                                                                st.session_state["slip_neg_spacing"],
                                                                dVdQ_meas_fit, Q_meas_fit)
+
+
+
                     # Sometimes least squares can't find any better parameters and throws an error, hence why a "try" is used
                     try:
                         [st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"],
@@ -729,24 +779,29 @@ if fullData is not None:
                                                   st.session_state["m_neg"]])
                         Q = Q_meas
                     except:
-                        Q = Q_meas
+                        Q, dVdQ_calc = dVdQ_c(st.session_state["slip_pos"], st.session_state["slip_neg"],
+                                              st.session_state["m_pos"],
+                                              st.session_state["m_neg"])
+                        V, dQdV_calc = dQdV_c(st.session_state["slip_pos"], st.session_state["slip_neg"],
+                                              st.session_state["m_pos"],
+                                              st.session_state["m_neg"])
 
                 slider_expander = st.sidebar.beta_expander("Adjust active mass and slippages")
 
-                # Adjustment sliders for the dVdQ analysis
                 with slider_expander:
                     # Positive active mass (g)
-                    m_pos = st.text_input("Positive Mass (g)", value=st.session_state["m_pos"])
-                    st.session_state["m_pos"] = float(m_pos)
+                    st.session_state["m_pos"] = float(st.text_input("Positive Mass (g)", value=st.session_state["m_pos"]))
 
-                    m_neg = st.text_input("Negative Mass (g)", value=st.session_state["m_neg"])
-                    st.session_state["m_neg"] = float(m_neg)
 
-                    pos_slip = st.text_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"])
-                    st.session_state["slip_pos"] = float(pos_slip)
+                    st.session_state["m_neg"] = float(st.text_input("Negative Mass (g)", value=st.session_state["m_neg"]))
 
-                    neg_slip = st.text_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"])
-                    st.session_state["slip_neg"] = float(neg_slip)
+
+                    st.session_state["slip_pos"] = float(st.text_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"]))
+
+
+                    st.session_state["slip_neg"] = float(st.text_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"]))
+
+
 
                     #st.session_state["m_pos"]"] = st.slider("Positive Mass (g)", value=float(state.kwargs["m_pos),
                     #                                  min_value=0.1, max_value=2.0)
@@ -788,6 +843,10 @@ if fullData is not None:
                     #export_int_plots = st.checkbox("Export Plots Over Intervals?")
                     #export_plot_bool = export_int_plots
                     #============================================#
+                    # Mac only
+                    export_plot_bool = False
+                    # ============================================#
+
                     freq_int_plots = st.number_input("Interval of intermediate fit plots", value=5, min_value=1)
                     display_int_plots = st.checkbox("Display intermediate fits")
                     display_plots_bool = display_int_plots
@@ -956,8 +1015,7 @@ if fullData is not None:
 
 
                     try:
-                        st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], state.kwargs[
-                            "m_neg"] = \
+                        st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], st.session_state["m_neg"] = \
                             least_squares_fit(Q_meas_i_t, dVdQ_meas_i_t, st.session_state["slip_pos"], st.session_state["slip_neg"],
                                               st.session_state["m_pos"],
                                               st.session_state["m_neg"],
@@ -1120,6 +1178,7 @@ if fullData is not None:
             st.write("X axis range:")
             # If the calculated dVdQ curve exists, then the default x axis minimum is either the lowest x value on the
             #   calculated or 0, whichever is lower
+
             if (len(V) > 0):
                 dqdv_xmin = st.number_input('dQ/dV X-minimum', value=min(min(V), min(V_meas)))
             else:

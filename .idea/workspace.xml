@@ -3,10 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="4bcf82ee-e01f-4bda-97b5-ad0054e07ff3" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linux/dVdQAnalysis_Linux.py" beforeDir="false" afterPath="$PROJECT_DIR$/linux/dVdQAnalysis_Linux.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linux/run_dVdQAnalysis" beforeDir="false" afterPath="$PROJECT_DIR$/linux/run_dVdQAnalysis" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/win/dVdQAnalysis_windows.py" beforeDir="false" afterPath="$PROJECT_DIR$/win/dVdQAnalysis_windows.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/win/run_dVdQAnalysis.bat" beforeDir="false" afterPath="$PROJECT_DIR$/win/run_dVdQAnalysis.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mac/dVdQAnalysis_Mac.py" beforeDir="false" afterPath="$PROJECT_DIR$/mac/dVdQAnalysis_Mac.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,7 +43,8 @@
       <workItem from="1626716773717" duration="1564000" />
       <workItem from="1626901436995" duration="939000" />
       <workItem from="1627390019594" duration="686000" />
-      <workItem from="1627393655800" duration="226000" />
+      <workItem from="1627393655800" duration="427000" />
+      <workItem from="1627474157780" duration="5062000" />
     </task>
     <servers />
   </component>
