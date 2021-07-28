@@ -20,7 +20,6 @@ from fractions import Fraction
 from scipy.interpolate import UnivariateSpline
 from pathlib import Path
 from scipy.optimize import curve_fit
-#import SessionState
 from scipy.signal import savgol_filter
 from bokeh.io import export_png
 #import tkinter as tk
@@ -408,7 +407,7 @@ if fullData is not None:
             st.write("Plotting cycle {0} with rate {1}:".format(cycnum, rate))
 
             # Creating a dictionary to pass to the session state as initial values
-            #st.session_state = {"m_pos": 1.0, "m_neg": 1.0, "slip_pos": 0.0, "slip_neg": 0.0,
+            #dic = {"m_pos": 1.0, "m_neg": 1.0, "slip_pos": 0.0, "slip_neg": 0.0,
             #       "slip_neg_min": -45, "slip_neg_max": 5, "slip_neg_spacing": 2.0,
             #       "slip_pos_min": -45, "slip_pos_max": 5, "slip_pos_spacing": 2.0,
             #       "mass_neg_min": 0.90, "mass_neg_max": 1.4, "mass_neg_spacing": 0.1,
@@ -417,6 +416,9 @@ if fullData is not None:
             #       "fit_cap_min_i": int(min(Q_meas)), "fit_cap_max_i": int(max(Q_meas)),
             #       "fit_cap_min_f": int(min(Q_meas)), "fit_cap_max_f": int(max(Q_meas)),
             #       "window_size": 15, "polyorder": 4,"dirname": ""}
+
+            #state = SessionState.get(kwargs=dic)
+
 
             if 'fit_cap_min_i' not in st.session_state:
                 st.session_state["fit_cap_min_i"] = int(min(Q_meas))
@@ -492,7 +494,6 @@ if fullData is not None:
 
             if 'mass_pos_spacing' not in st.session_state:
                 st.session_state["mass_pos_spacing"] = 0.1
-
 
 
 
@@ -748,10 +749,10 @@ if fullData is not None:
                     neg_slip = st.text_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"])
                     st.session_state["slip_neg"] = float(neg_slip)
 
-                    #st.session_state["m_pos"]"] = st.slider("Positive Mass (g)", value=float(state.kwargs["m_pos),
+                    #st.session_state["m_pos"]"] = st.slider("Positive Mass (g)", value=float(st.session_state["m_pos),
                     #                                  min_value=0.1, max_value=2.0)
                     # Negative active mass (g)
-                    #st.session_state["m_neg"]"] = st.slider("Negative Mass (g)", value=float(state.kwargs["m_neg),
+                    #st.session_state["m_neg"]"] = st.slider("Negative Mass (g)", value=float(st.session_state["m_neg),
                     #                                  min_value=0.1, max_value=2.0)
                     # Positive slippage (mAh)
                     #st.session_state["slip_pos"] = st.slider("Positive Slippage (mAh)", min_value=-100.0,
@@ -956,7 +957,7 @@ if fullData is not None:
 
 
                     try:
-                        st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], state.kwargs[
+                        st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], st.session_state[
                             "m_neg"] = \
                             least_squares_fit(Q_meas_i_t, dVdQ_meas_i_t, st.session_state["slip_pos"], st.session_state["slip_neg"],
                                               st.session_state["m_pos"],
