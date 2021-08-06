@@ -2,7 +2,6 @@
 Title: Neware Analysis Tool
 Created on Monday, May 10, 2021
 @author: John Corsten
-last modified : July 13, 2021, 5:20 PM
 """
 
 import streamlit as st
@@ -741,27 +740,9 @@ if fullData is not None:
                 slider_expander = st.sidebar.beta_expander("Adjust active mass and slippages")
 
                 with slider_expander:
-                    # Positive active mass (g)
-                    m_pos = st.text_input("Positive Mass (g)", value=st.session_state["m_pos"])
-                    st.session_state["m_pos"] = float(m_pos)
-
-                    m_neg = st.text_input("Negative Mass (g)", value=st.session_state["m_neg"])
-                    st.session_state["m_neg"] = float(m_neg)
-
-                    pos_slip = st.text_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"])
-                    st.session_state["slip_pos"] = float(pos_slip)
-
-                    neg_slip = st.text_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"])
-                    st.session_state["slip_neg"] = float(neg_slip)
                     st.session_state["m_pos"] = st.number_input("Positive Mass (g)", value=st.session_state["m_pos"])
-
-
                     st.session_state["m_neg"] = st.number_input("Negative Mass (g)", value=st.session_state["m_neg"])
-
-
                     st.session_state["slip_pos"] = st.number_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"])
-
-
                     st.session_state["slip_neg"] = st.number_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"])
 
                 # An "if not" had to be used instead of an else because the sliders would only behave properly if they
