@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="4bcf82ee-e01f-4bda-97b5-ad0054e07ff3" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mac/dVdQAnalysis_Mac.py" beforeDir="false" afterPath="$PROJECT_DIR$/mac/dVdQAnalysis_Mac.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -44,6 +45,7 @@
       <workItem from="1627390019594" duration="686000" />
       <workItem from="1627393655800" duration="427000" />
       <workItem from="1627474157780" duration="5062000" />
+      <workItem from="1628169900368" duration="877000" />
     </task>
     <servers />
   </component>

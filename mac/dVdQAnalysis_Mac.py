@@ -4,13 +4,10 @@ Created on Monday, May 10, 2021
 @author: John Corsten
 last modified : July 13, 2021, 5:20 PM
 """
-from doctest import master
 
-import scipy
 import streamlit as st
 
 import numpy as np
-
 import matplotlib.pyplot as plt
 from bokeh.layouts import row, column, gridplot
 from bokeh.models import Legend, LegendItem
@@ -18,16 +15,18 @@ from bokeh.plotting import figure, save
 from reader import ParseNeware
 from fractions import Fraction
 from scipy.interpolate import UnivariateSpline
-from pathlib import Path
 from scipy.optimize import curve_fit
-#import SessionState
 from scipy.signal import savgol_filter
-from bokeh.io import export_png
+## Windows only
+#from pathlib import Path
+#from bokeh.io import export_png
 #import tkinter as tk
 #from tkinter import filedialog
 
 
-st.title("Neware Analysis")
+'''
+## dV/dQ Analysis
+'''
 
 # File selection widget
 file_expander = st.beta_expander("Load files here")
@@ -233,7 +232,6 @@ def brute_force_fit(m_p_i, m_p_min, m_p_max, m_p_int, m_n_i, m_n_min, m_n_max, m
         s_p_vals = np.arange(s_p_min, s_p_max, s_p_int)
 
     if lock_ns:
-        st.write("Hello?")
         s_n_vals = [s_n_i]
     else:
         s_n_vals = np.arange(s_n_min, s_n_max, s_n_int)
