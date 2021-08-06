@@ -702,19 +702,6 @@ if fullData is not None:
                     neg_slip = st.text_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"])
                     st.session_state["slip_neg"] = float(neg_slip)
 
-                    #st.session_state["m_pos"]"] = st.slider("Positive Mass (g)", value=float(state.kwargs["m_pos),
-                    #                                  min_value=0.1, max_value=2.0)
-                    # Negative active mass (g)
-                    #st.session_state["m_neg"]"] = st.slider("Negative Mass (g)", value=float(state.kwargs["m_neg),
-                    #                                  min_value=0.1, max_value=2.0)
-                    # Positive slippage (mAh)
-                    #st.session_state["slip_pos"] = st.slider("Positive Slippage (mAh)", min_value=-100.0,
-                    #                                     value=float(st.session_state["slip_pos"]), max_value=50.0)
-                    # Negative slippage (mAh)
-                    #st.session_state["slip_neg"] = st.slider("Negative Slippage (mAh)",
-                    #                                     value=float(st.session_state["slip_neg"]), min_value=-100.0,
-                    #                                     max_value=50.0)
-
                 # An "if not" had to be used instead of an else because the sliders would only behave properly if they
                 #   followed the first if statement and preceded the next!
 
