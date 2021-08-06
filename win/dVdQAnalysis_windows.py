@@ -407,17 +407,6 @@ if fullData is not None:
 
             st.write("Plotting cycle {0} with rate {1}:".format(cycnum, rate))
 
-            # Creating a dictionary to pass to the session state as initial values
-            #st.session_state = {"m_pos": 1.0, "m_neg": 1.0, "slip_pos": 0.0, "slip_neg": 0.0,
-            #       "slip_neg_min": -45, "slip_neg_max": 5, "slip_neg_spacing": 2.0,
-            #       "slip_pos_min": -45, "slip_pos_max": 5, "slip_pos_spacing": 2.0,
-            #       "mass_neg_min": 0.90, "mass_neg_max": 1.4, "mass_neg_spacing": 0.1,
-            #       "mass_pos_min": 0.90, "mass_pos_max": 1.4, "mass_pos_spacing": 0.1,
-            #       "fit_min": int(min(Q_meas)), "fit_max": int(max(Q_meas)),
-            #       "fit_cap_min_i": int(min(Q_meas)), "fit_cap_max_i": int(max(Q_meas)),
-            #       "fit_cap_min_f": int(min(Q_meas)), "fit_cap_max_f": int(max(Q_meas)),
-            #       "window_size": 15, "polyorder": 4,"dirname": ""}
-
             if 'fit_cap_min_i' not in st.session_state:
                 st.session_state["fit_cap_min_i"] = int(min(Q_meas))
 
@@ -492,9 +481,6 @@ if fullData is not None:
 
             if 'mass_pos_spacing' not in st.session_state:
                 st.session_state["mass_pos_spacing"] = 0.1
-
-
-
 
             # ========================================================================== #
             # Windows only feature #
@@ -589,38 +575,6 @@ if fullData is not None:
 
                 st.session_state["mass_pos_spacing"] = st.number_input(label="Positive Active Mass Grid Spacing",
                                                                    value=st.session_state["mass_pos_spacing"])
-
-
-
-                #slip_neg_range = st.slider("Negative Slipping Range", -100, 50, (st.session_state["slip_neg_min"],
-                #                                                                 st.session_state["slip_neg_max"]), 1)
-                #st.session_state["slip_neg_spacing"] = st.number_input(label="Negative slippage grid spacing",
-                #                                                   value=st.session_state["slip_neg_spacing"])
-                #st.session_state["slip_neg_min"] = slip_neg_range[0]
-                #st.session_state["slip_neg_max"] = slip_neg_range[1]
-
-
-                #slip_pos_range = st.slider("Positive Slippage Range", -100, 50, (st.session_state["slip_pos_min"],
-                #                                                                 st.session_state["slip_pos_max"]), 1)
-                #st.session_state["slip_pos_spacing"] = st.number_input(label="Positive slippage grid spacing",
-                #                                                   value=st.session_state["slip_pos_spacing"])
-                #st.session_state["slip_pos_min"] = slip_pos_range[0]
-                #st.session_state["slip_pos_max"] = slip_pos_range[1]
-
-                #mass_neg_range = st.slider("Active Negative Mass Range", 0.1, 2.0, (st.session_state["mass_neg_min"],
-                #                                                                    st.session_state["mass_neg_max"]),
-                #                           0.1)
-                #st.session_state["mass_neg_spacing"] = st.number_input(label="Negative active mass grid spacing",
-                #                                                   value=st.session_state["mass_neg_spacing"])
-                #st.session_state["mass_neg_min"] = mass_neg_range[0]
-                #st.session_state["mass_neg_max"] = mass_neg_range[1]
-                #
-                #mass_pos_range = st.slider("Active Positive Mass Range", 0.1, 2.0, (st.session_state["mass_pos_min"],
-                #                                                                    st.session_state["mass_pos_max"]),
-                #                           0.1)
-
-                #st.session_state["mass_pos_min"] = mass_pos_range[0]
-                #st.session_state["mass_pos_max"] = mass_pos_range[1]
 
             if range_or_individual == "Individual":
                 # Expander for specifying the capacity range over which the fit will work
