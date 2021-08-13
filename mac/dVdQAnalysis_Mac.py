@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from bokeh.layouts import row, column, gridplot
 from bokeh.models import Legend, LegendItem
 from bokeh.plotting import figure, save
-from reader import ParseNeware
+from universal_format import UniversalFormat
 from fractions import Fraction
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import curve_fit
@@ -55,10 +55,10 @@ with file_expander:
              "top right of this widget to minimize it.")
 
 # Reading in Neware data, and caching data
-@st.cache(persist=True, show_spinner=False)
+@st.cache(persist=True, show_spinner=True, allow_output_mutation=True)
 def read_data(uploaded_bytes, cell_id):
-    return ParseNeware(cell_id, all_lines=uploaded_bytes)
-
+    uf = UniversalFormat(cell_id, all_lines=uploaded_bytes)
+    return uf, uf.get_rates()
 
 # Reading uploaded reference files, and caching data
 @st.cache(persist=True, show_spinner=False)
@@ -67,7 +67,6 @@ def read_ref(pData, nData):
     v_n, q_n = np.loadtxt(nData, skiprows=1, unpack=True)
 
     return v_n, q_n, v_p, q_p
-
 
 @st.cache(persist=True, show_spinner=False)
 def voltage_curves(cycnums, active_mass=None):
@@ -79,7 +78,6 @@ def voltage_curves(cycnums, active_mass=None):
         volt_list.append(volt)
 
     return cap_list, volt_list
-
 
 @st.cache(persist=True, show_spinner=False)
 def dVdQ_m(capacity_m, voltage_m, active_mass=None):
@@ -124,8 +122,6 @@ def dQdV_m(capacity_m, voltage_m, active_mass=None):
     new_volt = np.delete(new_volt, bad_inds)
 
     return new_volt, dcap / dvolt
-
-
 
 @st.cache(persist=True, show_spinner=False)
 def dVdQ_c(pos_slip, neg_slip, pos_mass, neg_mass):
@@ -211,7 +207,6 @@ def smooth_meas(dVdQ_meas, window, polyorder):
 
     return meas_smooth
 
-
 def brute_force_fit(m_p_i, m_p_min, m_p_max, m_p_int, m_n_i, m_n_min, m_n_max, m_n_int, s_p_i,
                     s_p_min, s_p_max, s_p_int, s_n_i, s_n_min, s_n_max, s_n_int, dVdQ_measured, Q_measured):
 
@@ -272,7 +267,7 @@ def brute_force_fit(m_p_i, m_p_min, m_p_max, m_p_int, m_n_i, m_n_min, m_n_max, m
 
 
 @st.cache(persist=True, show_spinner=False)
-def newareRates():
+def getRates():
     return nd.get_rates()
 
 
@@ -370,7 +365,8 @@ def temp_plotting(Q_measured, dVdQ_measured, cycle_number, save_plot, display_pl
 # If a Neware file has been uploaded
 if fullData is not None:
 
-    nd = read_data(fullData, "Cell_ID")
+    nd, uf_rates = read_data(fullData, "Cell_ID")
+
     # Options for what to plot
     # Only provide option of 'dV/dQ' if reference curves have been uploaded
     if posData is not None and negData is not None:
@@ -403,7 +399,7 @@ if fullData is not None:
         range_or_individual = st.sidebar.radio("Fit over range of cycles or individual cycle?", ["Individual", "Range"])
 
         # rates is a list which holds all rates which are C/20 or longer
-        rates = dVdQ_rates(newareRates())
+        rates = dVdQ_rates(uf_rates)
 
         # Dropdown with selectable cycle rates (based on the 'rates' list)
         rate = st.sidebar.selectbox("Which C-rate would you like to see?",
@@ -1119,9 +1115,12 @@ if fullData is not None:
             st.write("Y axis range:")
             dqdv_ymin = st.number_input('dQ/dV Y-minimum')
             if range_or_individual == "Individual":
-                dqdv_ylim = st.number_input('dQ/dV Y-limit', value=max(max(dQdV_meas), max(dQdV_calc)) + 40)
+                #dqdv_ylim = st.number_input('dQ/dV Y-limit', value=max(max(dQdV_meas), max(dQdV_calc)) + 40)
+                #dqdv_ylim = st.number_input('dQ/dV Y-limit', value=max(dQdV_meas) + 40)
+                dqdv_ylim = 0.1
             else:
-                dqdv_ylim = st.number_input('dQ/dV Y-limit', value=max(dQdV_meas) + 40)
+                #dqdv_ylim = st.number_input('dQ/dV Y-limit', value=max(dQdV_meas) + 40)
+                dqdv_ylim = 0.1
 
 
         dvdq_plot = figure(plot_width=600, x_range=(dvdq_xmin, dvdq_xlim), y_range=(dvdq_ymin, dvdq_ylim), plot_height=400,
@@ -1232,7 +1231,7 @@ if fullData is not None:
 
     elif plot_opts == 'V-Q':
 
-        rates = ['All'] + nd.get_rates()
+        rates = ['All'] + uf_rates
         rate = st.sidebar.selectbox("Which C-rate would you like to see?",
                                     tuple(rates))
 
