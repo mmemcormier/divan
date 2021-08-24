@@ -58,7 +58,7 @@ with file_expander:
 @st.cache(persist=True, show_spinner=True, allow_output_mutation=True)
 def read_data(uploaded_bytes, cell_id):
     uf = UniversalFormat(cell_id, all_lines=uploaded_bytes)
-    return uf, uf.get_rates()
+    return uf #, uf.get_rates()
 
 # Reading uploaded reference files, and caching data
 @st.cache(persist=True, show_spinner=False)
@@ -365,7 +365,9 @@ def temp_plotting(Q_measured, dVdQ_measured, cycle_number, save_plot, display_pl
 # If a Neware file has been uploaded
 if fullData is not None:
 
-    nd, uf_rates = read_data(fullData, "Cell_ID")
+    #nd, uf_rates = read_data(fullData, "Cell_ID")
+    nd = read_data(fullData, "Cell_ID")
+    uf_rates = nd.get_rates()
 
     # Options for what to plot
     # Only provide option of 'dV/dQ' if reference curves have been uploaded
