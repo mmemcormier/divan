@@ -55,10 +55,10 @@ with file_expander:
              "top right of this widget to minimize it.")
 
 # Reading in Neware data, and caching data
-@st.cache(persist=True, show_spinner=True, allow_output_mutation=True)
+@st.cache(persist=True, show_spinner=True)
 def read_data(uploaded_bytes, cell_id):
     uf = UniversalFormat(cell_id, all_lines=uploaded_bytes)
-    return uf #, uf.get_rates()
+    return uf
 
 # Reading uploaded reference files, and caching data
 @st.cache(persist=True, show_spinner=False)
@@ -78,6 +78,26 @@ def voltage_curves(cycnums, active_mass=None):
         volt_list.append(volt)
 
     return cap_list, volt_list
+
+@st.cache(persist=True, show_spinner=False)
+def dqdv_curves(cycnums, active_mass=None):
+    V_list = []
+    dqdv_list = []
+    for i in range(len(cycnums)):
+        volt, dqdv = nd.get_dQdV(cycnum=cycnums[i])
+
+        inds = np.argmax(volt)
+        if reference_type == "Discharge":
+            volt = volt[:inds]
+            dqdv = dqdv[:inds]
+        else:
+            volt = volt[inds:]
+            dqdv = dqdv[inds:]
+
+        V_list.append(volt)
+        dqdv_list.append(dqdv)
+
+    return V_list, dqdv_list
 
 @st.cache(persist=True, show_spinner=False)
 def dVdQ_m(capacity_m, voltage_m, active_mass=None):
@@ -368,15 +388,17 @@ if fullData is not None:
     #nd, uf_rates = read_data(fullData, "Cell_ID")
     nd = read_data(fullData, "Cell_ID")
     uf_rates = nd.get_rates()
+    ncycs = nd.get_ncyc()
+
 
     # Options for what to plot
     # Only provide option of 'dV/dQ' if reference curves have been uploaded
     if posData is not None and negData is not None:
         plot_opts = st.sidebar.selectbox("What would you like to plot?",
-                                         ('None', 'V-Q', 'dV/dQ'))
+                                         ('None', 'V-Q', 'dV/dQ', 'dQ/dV vs. V'))
     else:
         plot_opts = st.sidebar.selectbox("What would you like to plot?",
-                                         ('None', 'V-Q'))
+                                         ('None', 'V-Q', 'dQ/dV vs. V'))
 
     # Selecting available cycle rates
     rates = []
@@ -1231,13 +1253,66 @@ if fullData is not None:
             if plot_dqdv:
                 st.bokeh_chart(dqdv_plot, use_container_width=True)
 
+    elif plot_opts == "dQ/dV vs. V":
+
+        indiv_or_mult = st.sidebar.radio("Display one cycle or multiple at once?", ["One Cycle", "Multiple Cycles"])
+
+        rates = ['All'] + uf_rates
+        rate = st.sidebar.selectbox("Which C-rate would you like to see?",
+                                    tuple(rates))
+
+        #ncycs = nd.get_ncyc()
+        if rate == 'All':
+            cyc_nums = np.arange(1, ncycs + 1)
+        else:
+            cyc_nums = np.array(nd.select_by_rate(rate))
+
+        if indiv_or_mult == "Multiple Cycles":
+
+            # Slider that determines which cycles are displayed depends on which cycle rate was selected (adjusts to only
+            #   include cycles that were done at the selected rate)
+            cyc_range = st.sidebar.select_slider("Cycle Numbers", options=list(cyc_nums), value=(int(min(cyc_nums)),
+                                                                                                 int(max(cyc_nums))))
+            inds = np.where((cyc_nums <= cyc_range[1]) & (cyc_nums >= cyc_range[0]))[0]
+            cycnums = cyc_nums[inds]
+            num_cycs = len(cycnums)
+
+            st.write("Plotting {0} cycles within range: ({1}, {2})".format(rate,
+                                                                           cyc_range[0],
+                                                                           cyc_range[1]))
+        else:
+            cycle = st.sidebar.select_slider("Cycle Numbers", options=list(cyc_nums), value=(int(min(cyc_nums))))
+            num_cycs = 1
+            cycnums = list([cycle])
+            st.write("Plotting cycle: {0}".format(cycnums[0]))
+
+        # When checkbox is selected, V-Q plot renders
+        plot_cbox = st.sidebar.checkbox('Plot!')
+
+        # If user selects the "plot" checkbox, plot will render given the predefined cycle numbers
+        if plot_cbox:
+
+            avail_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+            colors = avail_colors * int(num_cycs / len(avail_colors) + 1)
+
+            p = figure(plot_width=600, plot_height=400,
+                       x_axis_label='Capacity, Q (mAh)',
+                       y_axis_label='Voltage (V)')
+
+            v_list, dqdv_list = dqdv_curves(cycnums, active_mass=None)
+
+            for v, dqdv, color in zip(v_list, dqdv_list, colors):
+                p.line(v, dqdv,color=color, line_width=2.0)
+
+            st.bokeh_chart(p)
+
     elif plot_opts == 'V-Q':
 
         rates = ['All'] + uf_rates
         rate = st.sidebar.selectbox("Which C-rate would you like to see?",
                                     tuple(rates))
 
-        ncycs = nd.get_ncyc()
+        #ncycs = nd.get_ncyc()
         if rate == 'All':
             cyc_nums = np.arange(1, ncycs + 1)
         else:
