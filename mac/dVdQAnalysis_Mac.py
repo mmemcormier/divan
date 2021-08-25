@@ -15,6 +15,7 @@ from universal_format import UniversalFormat
 from fractions import Fraction
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import curve_fit
+import bokeh.palettes as bp
 from scipy.signal import savgol_filter
 ## Windows only
 #from pathlib import Path
@@ -1308,50 +1309,79 @@ if fullData is not None:
 
     elif plot_opts == 'V-Q':
 
-        rates = ['All'] + uf_rates
+        rates = ['All'] + nd.get_rates()
         rate = st.sidebar.selectbox("Which C-rate would you like to see?",
                                     tuple(rates))
 
-        #ncycs = nd.get_ncyc()
+        ncycs = nd.get_ncyc()
         if rate == 'All':
             cyc_nums = np.arange(1, ncycs + 1)
         else:
             cyc_nums = np.array(nd.select_by_rate(rate))
 
-        # Slider that determines which cycles are displayed depends on which cycle rate was selected (adjusts to only
-        #   include cycles that were done at the selected rate)
-        cyc_range = st.sidebar.select_slider("Cycle Numbers", options=list(cyc_nums), value=(int(min(cyc_nums)),
-                                                                                             int(max(cyc_nums))))
+        cyc_range = st.sidebar.slider("Cycle Numbers", 1, ncycs, (1, ncycs), 1)
         inds = np.where((cyc_nums <= cyc_range[1]) & (cyc_nums >= cyc_range[0]))[0]
         cycnums = cyc_nums[inds]
         num_cycs = len(cycnums)
-
         st.write("Plotting {0} cycles within range: ({1}, {2})".format(rate,
                                                                        cyc_range[0],
                                                                        cyc_range[1]))
+
+        active_mass = st.sidebar.number_input("Active material mass (in grams):")
+        if active_mass == 0.0:
+            active_mass = None
+        else:
+            st.write("Calculating specific capacity using {} g active material".format(active_mass))
+
+
+        # Colour options not working
+        #cmap = st.sidebar.selectbox("Color pallette",
+        #                            ('Default', 'viridis', 'cividis'))
+        #if cmap == 'Default':
+        #    avail_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        #    colors = avail_colors * int(num_cycs / len(avail_colors) + 1)
+        #elif cmap == 'viridis':
+        #    colors = bp.viridis(num_cycs)
+        #elif cmap == 'cividis':
+        #    colors = bp.cividis(num_cycs)
+
+        # For now, no colour options
+        avail_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        colors = avail_colors * int(num_cycs / len(avail_colors) + 1)
+
+        smooth = st.sidebar.slider("dQ/dV moving average window width", 0, 10)
+        if smooth == 0:
+            smooth = None
+
         # When checkbox is selected, V-Q plot renders
         plot_cbox = st.sidebar.checkbox('Plot!')
 
         # If user selects the "plot" checkbox, plot will render given the predefined cycle numbers
         if plot_cbox:
 
-            avail_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-            colors = avail_colors * int(num_cycs / len(avail_colors) + 1)
+            p = figure(plot_width=800, plot_height=400)
 
-            p = figure(plot_width=600, plot_height=400,
-                       x_axis_label='Capacity, Q (mAh)',
-                       y_axis_label='Voltage (V)')
+            caps, volts = voltage_curves(cycnums, active_mass=active_mass)
 
-            caps, volts = voltage_curves(cycnums, active_mass=None)
-
+            if active_mass is not None:
+                p.xaxis.axis_label = 'Specific Capacity (mAh/g)'
+            else:
+                p.xaxis.axis_label = 'Capacity (mAh)'
+            p.yaxis.axis_label = 'Voltage (V)'
             for cap, volt, color in zip(caps, volts, colors):
-                p.line(cap, volt,color=color, line_width=2.0)
+                p.line(cap, volt, color=color, line_width=2.0)
 
-            #if plot_type == "Line":
-            #    for cap, volt, color in zip(caps, volts, colors):
-            #        p.line(cap, volt,color=color, line_width=2.0)
-            #elif plot_type == "Scatter":
-            #    for cap, volt, color in zip(caps, volts, colors):
-            #        p.circle(cap, volt, color=color, size=2.0)
+            st.bokeh_chart(p, use_container_width=True)
 
-            st.bokeh_chart(p)
+        # ========== Windows only ===============#
+        #rel_path = st.text_input("Save figure to: C://")
+        #savepng_button = st.button("Save figure to png!")
+        #savehtml_button = st.button("Save figure to html! (interactive plot)")
+
+        #home_path = Path("/home/mmemc")
+        #fig_path = home_path / rel_path
+        #if savehtml_button is True:
+        #    save(p, filename="{}.html".format(fig_path))
+        #if savepng_button is True:
+        #    export_png(p, filename="{}.png".format(fig_path))
+        # =======================================#
