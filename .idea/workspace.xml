@@ -2,8 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="4bcf82ee-e01f-4bda-97b5-ad0054e07ff3" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/win/neware_parser.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/win/universal_format.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/linux/dVdQAnalysis_Linux.py" beforeDir="false" afterPath="$PROJECT_DIR$/linux/dVdQAnalysis_Linux.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/linux/reader_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/linux/neware_parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/linux/universal_format.py" beforeDir="false" afterPath="$PROJECT_DIR$/linux/universal_format.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mac/dVdQAnalysis_Mac.py" beforeDir="false" afterPath="$PROJECT_DIR$/mac/dVdQAnalysis_Mac.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mac/reader_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/mac/neware_parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mac/universal_format.py" beforeDir="false" afterPath="$PROJECT_DIR$/mac/universal_format.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/win/dVdQAnalysis_windows.py" beforeDir="false" afterPath="$PROJECT_DIR$/win/dVdQAnalysis_windows.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,7 +30,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/mac" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/linux" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -32,7 +40,9 @@
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/linux" />
       <recent name="$PROJECT_DIR$/mac" />
+      <recent name="$PROJECT_DIR$/win" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/mac" />
