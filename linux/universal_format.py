@@ -36,19 +36,51 @@ class UniversalFormat():
         else:
 
             self.file_type = FILE_TYPES[1]
+            #print(lines[:2])
             #header_list = lines[12].split(",")
             #header_list[-1] = header_list[-1].strip()
-            #mass = float(str(lines[4]).split(" ")[2])
-            headlines = [l.strip().split() for l in lines[20]]
-            for i in range(20):
+            #mass = float(str(lines[4]).split(" ")[2])\
+            
+            headlines = [l.strip().split() for l in lines[:40]]
+            #print(headlines[:4])
+            for i in range(40):
                 if len(headlines[i]) > 0:
                     if headlines[i][0] == '[Data]':
                         hlinenum = i + 1
                         break
+            colnames = lines[hlinenum].strip().split(",")
+            
+            for i in range(len(colnames)):
+                if colnames[i] == "Cycle Number":
+                    colnames[i] = "Cycle"
+                if (colnames[i] == "Step Number") & ("Step Type" not in colnames):
+                    colnames[i] = "Step"
+                if colnames[i] == "Step Type":
+                    colnames[i] = "Step"
+                if colnames[i] == "Current (A)":
+                    colnames[i] = "Meas I (A)"
+                if colnames[i] == "Run Time (h)":
+                    colnames[i] = "Time"
+
+                
             
             self.formatted_df = pd.read_csv(genericfile, header=hlinenum)
+            self.formatted_df.columns = colnames
             #self.formatted_df = pd.read_csv(genericfile, skiprows=range(0,14), header=0, names=header_list)
 
+        if "Prot.Step" not in colnames:
+        #df = df.rename(columns={'Flag':'Prot.Step'})
+            i = self.formatted_df.Step
+            self.formatted_df['Prot.Step'] = i.ne(i.shift()).cumsum() - 1
+            
+        t = self.formatted_df['Time'].values
+        dt = t[1:] - t[:-1]
+        inds = np.where(dt < 0.0)[0]
+        self.formatted_df = self.formatted_df.drop(inds+1)
+        inds = self.formatted_df.index[self.formatted_df['Potential (V)'] < 0.0].tolist()
+        self.formatted_df = self.formatted_df.drop(inds)
+        
+        
         cap = self.formatted_df["Capacity (Ah)"].values
         max_inds = np.argpartition(cap, -5)[-5:]
         ref_cap = np.sum(cap[max_inds]) / 5
@@ -143,13 +175,13 @@ class UniversalFormat():
                     selected_cycs.append(cycnums[i])
 
             elif cyctype == 'charge':
-                step = self.step_df.loc[(self.step_df["Prot.Step"] == 1) | (self.step_df["Prot.Step"] == 5)]
+                step = self.step_df.loc[(self.step_df["Step"] == 1) | (self.step_df["Step"] == 5)]
                 #step = self.formatted_df.loc[self.formatted_df['Prot.Step'] == stepnums[0]]
                 if step['C_rate'].values == rate:
                     selected_cycs.append(cycnums[i])
 
             elif cyctype == 'discharge':
-                step = self.step_df.loc[(self.step_df["Prot.Step"] == 2) | (self.step_df["Prot.Step"] == 6)]
+                step = self.step_df.loc[(self.step_df["Step"] == 2) | (self.step_df["Step"] == 6)]
                 #step = self.formatted_df.loc[self.formatted_df['Prot.Step'] == stepnums[-1]]
                 if step['C_rate'].values == rate:
                     selected_cycs.append(cycnums[i])
@@ -159,10 +191,6 @@ class UniversalFormat():
     
     def get_vcurve(self, cycnum=-1, cyctype='cycle', active_mass=None):
 
-        #TODO
-        # It looks like the first cycle was the issue, this is a temporary fix
-        if cycnum == 1:
-            cycnum = -1
 
         if cyctype not in CYC_TYPES:
             raise ValueError('cyctype must be one of {0}'.format(CYC_TYPES))
@@ -182,10 +210,10 @@ class UniversalFormat():
             if len(chg) != 0:
                 # Wasn't working when I performed this check in neware_parser.py, this is a temporary fix until I
                 #   can figure it out. better ask Marc!
-                if max(chg['Potential (V)'].values) > 1000:
-                    voltage = chg['Potential (V)'].values / 1000
-                else:
-                    voltage = chg['Potential (V)'].values / 1000
+                #if max(chg['Potential (V)'].values) > 1000:
+                #    voltage = chg['Potential (V)'].values / 1000
+                #else:
+                voltage = chg['Potential (V)'].values
 
                 capacity = chg['Capacity (Ah)'].values
             else:
@@ -195,10 +223,10 @@ class UniversalFormat():
             dis = cycle.loc[cycle['Step'] == 2]
 
             if len(dis) != 0:
-                if max(dis['Potential (V)'].values) > 1000:
-                    voltage = dis['Potential (V)'].values / 1000
-                else:
-                    voltage = dis['Potential (V)'].values
+                #if max(dis['Potential (V)'].values) > 1000:
+                #    voltage = dis['Potential (V)'].values / 1000
+                #else:
+                voltage = dis['Potential (V)'].values
 
                 capacity = dis['Capacity (Ah)'].values
             else:
@@ -207,29 +235,31 @@ class UniversalFormat():
         elif cyctype == 'cycle':
 
             chg = cycle.loc[(cycle['Step'] == 1) | (cycle['Step'] == 5)]
+            print(len(chg))
 
             if len(chg) != 0:
 
-                if max(chg['Potential (V)'].values) > 1000:
-                    Vchg = chg['Potential (V)'].values / 1000
-                else:
-                    Vchg = chg['Potential (V)'].values
+                #if max(chg['Potential (V)'].values) > 1000:
+                #    Vchg = chg['Potential (V)'].values / 1000
+                #else:
+                Vchg = chg['Potential (V)'].values
 
                 Cchg = chg['Capacity (Ah)'].values
 
 
-                dis = cycle.loc[cycle['Step'] == 2]
-                if max(chg['Potential (V)'].values) > 1000:
-                    Vdchg = chg['Potential (V)'].values / 1000
-                else:
-                    Vdchg = chg['Potential (V)'].values
+                dis = cycle.loc[(cycle['Step'] == 2) | (cycle['Step'] == 6)]
+                #if max(chg['Potential (V)'].values) > 1000:
+                #    Vdchg = chg['Potential (V)'].values / 1000
+                #else:
+                Vdchg = dis['Potential (V)'].values
                 Cdchg = dis['Capacity (Ah)'].values
 
                 voltage = np.concatenate((Vchg, Vdchg))
-                capacity = np.concatenate((Cchg, -Cdchg+Cchg[-1]))
+                capacity = np.concatenate((Cchg, Cdchg))
+                #capacity = np.concatenate((Cchg, -Cdchg+Cchg[-1]))
 
             else:
-                st.write(cycnum)
+                #st.write(cycnum)
                 return None, None
 
         return capacity, voltage
