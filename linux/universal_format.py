@@ -36,10 +36,18 @@ class UniversalFormat():
         else:
 
             self.file_type = FILE_TYPES[1]
-            header_list = lines[12].split(",")
-            header_list[-1] = header_list[-1].strip()
-            mass = float(str(lines[4]).split(" ")[2])
-            self.formatted_df = pd.read_csv(genericfile, skiprows=range(0,14), header=0, names=header_list)
+            #header_list = lines[12].split(",")
+            #header_list[-1] = header_list[-1].strip()
+            #mass = float(str(lines[4]).split(" ")[2])
+            headlines = [l.strip().split() for l in lines[20]]
+            for i in range(20):
+                if len(headlines[i]) > 0:
+                    if headlines[i][0] == '[Data]':
+                        hlinenum = i + 1
+                        break
+            
+            self.formatted_df = pd.read_csv(genericfile, header=hlinenum)
+            #self.formatted_df = pd.read_csv(genericfile, skiprows=range(0,14), header=0, names=header_list)
 
         cap = self.formatted_df["Capacity (Ah)"].values
         max_inds = np.argpartition(cap, -5)[-5:]
