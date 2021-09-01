@@ -7,7 +7,7 @@ from scipy.integrate import simps
 import re
 from argparse import ArgumentParser
 from datetime import datetime
-import streamlit as st
+
 
 CYC_TYPES = {'charge', 'discharge', 'cycle'}
 RATES = np.array([1/160, 1/80, 1/40, 1/20, 1/10, 1/5, 1/4, 1/3, 1/2, 1, 2, 3, 4, 5])
@@ -162,21 +162,7 @@ class ParseNeware():
         self.cyc = pd.read_csv('{}/cyc.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
         self.step = pd.read_csv('{}/step.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
         self.rec = pd.read_csv('{}/rec.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
-
-        if self.recunits['Voltage'] == 'mV':
-            self.rec['Voltage'] = self.rec['Voltage'] / 1000
-            self.recunits['Voltage'] = 'V'
-
-        # Convert Capacity_Density to mAh/g from mAh/kg. Unit label can be wrong.
-        cyc2_df = self.rec.loc[self.rec['Cycle_ID'] == 3]
-        max_cap = cyc2_df['Capacity_Density'].values
-
-        if np.amax(max_cap) > 1000:
-            self.rec['Capacity_Density'] = self.rec['Capacity_Density'] / 1000
-            self.cyc['Specific_Capacity-DChg'] = self.cyc['Specific_Capacity-DChg'] / 1000
-        if self.recunits['Capacity_Density'] == 'mAh/kg':
-            self.recunits['Capacity_Density'] = 'mAh/g'
-
+        
         ## =============================================== ##
 
         # Need codes checked
@@ -230,7 +216,7 @@ class ParseNeware():
 
         
         univ_df_rows = []
-        univ_cols = ["Time (h)", "Cycle", "Step", "Meas I (A)", "Potential (V)", "Capacity (Ah)", "Prot.Step", "Capacity_Density"]
+        univ_cols = ["Time", "Cycle", "Step", "Current", "Potential", "Capacity", "Prot_step", "Capacity_Density"]
         
         for i in range(len(univ_q)):
             univ_df_rows.append([univ_t[i], univ_cyc[i], univ_step_code[i], univ_curr[i], univ_v[i], univ_q[i], univ_prot_step[i], univ_cd[i]])
@@ -324,6 +310,18 @@ class ParseNeware():
         self.step = pd.DataFrame.from_records(step, columns=newslabels)
         self.rec = pd.DataFrame.from_records(rec, columns=newrlabels)
         '''
+        if self.recunits['Voltage'] == 'mV':
+            self.rec['Voltage'] = self.rec['Voltage'] / 1000
+            self.recunits['Voltage'] = 'V'
+
+        # Convert Capacity_Density to mAh/g from mAh/kg. Unit label can be wrong.
+        cyc2_df = self.rec.loc[self.rec['Cycle_ID'] == 3]
+        max_cap = cyc2_df['Capacity_Density'].values
+        if np.amax(max_cap) > 1000:
+            self.rec['Capacity_Density'] = self.rec['Capacity_Density'] / 1000
+            self.cyc['Specific_Capacity-DChg'] = self.cyc['Specific_Capacity-DChg'] / 1000  
+        if self.recunits['Capacity_Density'] == 'mAh/kg':
+            self.recunits['Capacity_Density'] = 'mAh/g'
             
     def get_rec(self):
         return self.rec

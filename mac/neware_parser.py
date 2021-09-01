@@ -216,7 +216,7 @@ class ParseNeware():
 
         
         univ_df_rows = []
-        univ_cols = ["Time (h)", "Cycle", "Step", "Meas I (A)", "Potential (V)", "Capacity (Ah)", "Prot.Step", "Capacity_Density"]
+        univ_cols = ["Time", "Cycle", "Step", "Current", "Potential", "Capacity", "Prot_step", "Capacity_Density"]
         
         for i in range(len(univ_q)):
             univ_df_rows.append([univ_t[i], univ_cyc[i], univ_step_code[i], univ_curr[i], univ_v[i], univ_q[i], univ_prot_step[i], univ_cd[i]])
