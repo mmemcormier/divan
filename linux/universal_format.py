@@ -22,7 +22,10 @@ class UniversalFormat():
             lines = []
             self.genericfile = genericfile
             for line in all_lines:
-                lines.append(line.decode('unicode_escape'))
+                if genericfile == "txt":
+                    lines.append(line.decode('unicode_escape'))
+                else:
+                    lines.append(line)
         else:
             self.genericfile = genericfile[:-4]
             with open(genericfile, 'r') as f:
@@ -65,8 +68,10 @@ class UniversalFormat():
                 elif hline[i] == "Potential (V)":
                     colnames[i] = "Potential"
 
-            self.formatted_df = pd.read_csv(genericfile, header=hlinenum)
+            self.formatted_df = pd.DataFrame([r.split(",") for r in lines][hlinenum+1:])
             self.formatted_df.columns = colnames
+            self.formatted_df.pop("Date and Time")
+            self.formatted_df = self.formatted_df.astype(float)
 
         # Manually add step counter no matter what.
         i = self.formatted_df["Step"]

@@ -22,6 +22,7 @@ from scipy.signal import savgol_filter
 #from bokeh.io import export_png
 #import tkinter as tk
 #from tkinter import filedialog
+#import io
 
 
 '''
@@ -58,7 +59,15 @@ with file_expander:
 # Reading in Neware data, and caching data
 @st.cache(persist=True, show_spinner=True)
 def read_data(uploaded_bytes, cell_id):
-    uf = UniversalFormat(cell_id, all_lines=uploaded_bytes)
+    if uploaded_bytes.type == 'application/vnd.ms-excel':
+        file = 'csv'
+        buffer = (uploaded_bytes.getbuffer())
+        data = buffer.tobytes().decode(encoding="utf-8").splitlines()
+    else:
+        file = "txt"
+        data = uploaded_bytes
+        
+    uf = UniversalFormat(file, all_lines=data)
     return uf
 
 # Reading uploaded reference files, and caching data
@@ -546,7 +555,7 @@ if fullData is not None:
 
             #with folder_expander:
 
-                # Folder picker button
+            #    # Folder picker button
             #    st.write('Please select a folder where your files will be saved to:')
             #    folder_button = st.button('Folder Picker')
             #    dirname = None
