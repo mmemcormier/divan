@@ -30,12 +30,13 @@ class UniversalFormat():
 
         if "Cycle ID" == lines[0][:8]:
             self.file_type = FILE_TYPES[0]
-            self.neware = ParseNeware(self.genericfile, all_lines=lines)
-            self.formatted_df = self.neware.get_universal_format()
-
+            parsed_data = ParseNeware(self.genericfile, all_lines=lines)
+            self.formatted_df = parsed_data.get_universal_format()
+            self.cap_type = parsed_data.cap_type
         else:
 
             self.file_type = FILE_TYPES[1]
+            self.cap_type = "cum"
             
             headlines = [l.strip().split() for l in lines[:40]]
             for i in range(40):
@@ -174,13 +175,11 @@ class UniversalFormat():
 
             elif cyctype == 'charge':
                 step = self.step_df.loc[(self.step_df["Step"] == 1) | (self.step_df["Step"] == 5)]
-                #step = self.formatted_df.loc[self.formatted_df['Prot.Step'] == stepnums[0]]
                 if step['C_rate'].values == rate:
                     selected_cycs.append(cycnums[i])
 
             elif cyctype == 'discharge':
                 step = self.step_df.loc[(self.step_df["Step"] == 2) | (self.step_df["Step"] == 6)]
-                #step = self.formatted_df.loc[self.formatted_df['Prot.Step'] == stepnums[-1]]
                 if step['C_rate'].values == rate:
                     selected_cycs.append(cycnums[i])
 
@@ -234,8 +233,11 @@ class UniversalFormat():
                 Cdchg = dis['Capacity'].values
 
                 voltage = np.concatenate((Vchg, Vdchg))
-                capacity = np.concatenate((Cchg, Cdchg))
-                #capacity = np.concatenate((Cchg, -Cdchg+Cchg[-1]))
+                if self.cap_type == "cross":
+                    capacity = np.concatenate((Cchg, -Cdchg+Cchg[-1]))
+                else:
+                    capacity = np.concatenate((Cchg, Cdchg))
+                
 
             else:
                 return None, None
