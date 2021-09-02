@@ -17,7 +17,7 @@ class UniversalFormat():
 
     def __init__(self, genericfile, all_lines=None):
         ## Parse file to determine what kind of file it is
-
+        
         if all_lines is not None:
             lines = []
             self.genericfile = genericfile
@@ -35,11 +35,11 @@ class UniversalFormat():
             self.file_type = FILE_TYPES[0]
             parsed_data = ParseNeware(self.genericfile, all_lines=lines)
             self.formatted_df = parsed_data.get_universal_format()
-            self.cap_type = parsed_data.cap_type
+            cap_type = parsed_data.cap_type
         else:
 
             self.file_type = FILE_TYPES[1]
-            self.cap_type = "cum"
+            cap_type = "cum"
             
             headlines = [l.strip().split() for l in lines[:40]]
             for i in range(40):
@@ -72,7 +72,8 @@ class UniversalFormat():
             self.formatted_df.columns = colnames
             self.formatted_df.pop("Date and Time")
             self.formatted_df = self.formatted_df.astype(float)
-
+            
+        
         # Manually add step counter no matter what.
         i = self.formatted_df["Step"]
         self.formatted_df["Prot_step"] = i.ne(i.shift()).cumsum() - 1
@@ -135,6 +136,7 @@ class UniversalFormat():
         print('Found discharge C-rates: {}'.format(dis_crates))
         self.chg_crates = chg_crates
         self.dis_crates = dis_crates
+        self.cap_type = cap_type
 
     def get_ncyc(self):
         '''
@@ -246,6 +248,8 @@ class UniversalFormat():
 
             else:
                 return None, None
+        if max(voltage) > 1000:
+            voltage = list(np.array(voltage) / 1000)
 
         return capacity, voltage
 
