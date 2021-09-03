@@ -248,10 +248,8 @@ class UniversalFormat():
 
             else:
                 return None, None
-        if max(voltage) > 1000:
-            voltage = list(np.array(voltage) / 1000)
 
-        return np.array(capacity), voltage
+        return capacity, voltage
 
     def get_dQdV(self, cycnum=-1, cyctype='cycle'):
         '''

@@ -248,8 +248,6 @@ class UniversalFormat():
 
             else:
                 return None, None
-        if max(voltage) > 1000:
-            voltage = list(np.array(voltage) / 1000)
 
         return capacity, voltage
 
