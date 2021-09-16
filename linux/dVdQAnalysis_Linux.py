@@ -154,15 +154,26 @@ def dQdV_m(capacity_m, voltage_m, active_mass=None):
 
     return new_volt, (dcap / dvolt)
 
-@st.cache(persist=True, show_spinner=False)
+def monoton_check(x, y):
+        dx = x[1:] - x[:-1]
+        inds = np.where(dx <= 0.0)[0]
+        x_new = np.delete(x,list(inds+1))
+        y_new = np.delete(y,list(inds+1))
+        
+        return x_new, y_new
+
+#@st.cache(persist=True, show_spinner=False)
 def dVdQ_c(pos_slip, neg_slip, pos_mass, neg_mass):
     Q_p = q_p * pos_mass + pos_slip
     Q_n = q_n * neg_mass + neg_slip
     Qarr = np.arange(max(Q_p[0], Q_n[0]), min(Q_p[-1], Q_n[-1]), 0.1)
 
-    Q_p_int = UnivariateSpline(Q_p, v_p, s=0)
+    #Q_p, v_p = monoton_check(Q_p, v_p)
+    #Q_n, v_n = monoton_check(Q_n, v_n)
+
+    Q_p_int = UnivariateSpline(Q_p, v_p, s=st.session_state['s_pos'])
     V_p_int = Q_p_int(Qarr)
-    Q_n_int = UnivariateSpline(Q_n, v_n, s=0)
+    Q_n_int = UnivariateSpline(Q_n, v_n, s=st.session_state['s_neg'])
     V_n_int = Q_n_int(Qarr)
 
     dVdQ = np.diff(V_p_int) / np.diff(Qarr) - np.diff(V_n_int) / np.diff(Qarr)
@@ -171,10 +182,39 @@ def dVdQ_c(pos_slip, neg_slip, pos_mass, neg_mass):
     return Qarr, dVdQ
 
 @st.cache(persist=True, show_spinner=False)
+def reference_dVdQ_c(ref_type, s_neg, s_pos):
+    
+    if ref_type not in ['Positive Reference','Negative Reference']:
+        return None, None
+    
+    Q_p = q_p * st.session_state['m_pos'] + st.session_state['slip_pos']
+    Q_n = q_n * st.session_state['m_neg'] + st.session_state['slip_neg']
+    Qarr = np.arange(max(Q_p[0], Q_n[0]), min(Q_p[-1], Q_n[-1]), 0.1)
+
+    Qarr = (Qarr[1:] + Qarr[:-1]) / 2
+
+    if ref_type == 'Positive Reference':
+        Q_p_int = UnivariateSpline(Q_p, v_p, s=s_pos)
+        V_p_int = Q_p_int(Qarr)
+        
+        return Qarr[1:], np.diff(V_p_int) / np.diff(Qarr)
+    
+    elif ref_type == 'Negative Reference':
+        Q_n_int = UnivariateSpline(Q_n, v_n, s=s_neg)
+        V_n_int = Q_n_int(Qarr)
+        return Qarr[1:], np.diff(V_n_int) / np.diff(Qarr)
+    
+
+    return Qarr, dVdQ
+
+#@st.cache(persist=True, show_spinner=False)
 def dQdV_c(pos_slip, neg_slip, pos_mass, neg_mass):
     Q_p = q_p * pos_mass + pos_slip
     Q_n = q_n * neg_mass + neg_slip
     Qarr = np.arange(max(Q_p[0], Q_n[0]), min(Q_p[-1], Q_n[-1]), 0.1)
+
+    #Q_p, v_p = monoton_check(Q_p, v_p)
+    #Q_n, v_pn = monoton_check(Q_n, v_n)
 
     Q_p_int = UnivariateSpline(Q_p, v_p, s=0)
     V_p_int = Q_p_int(Qarr)
@@ -195,9 +235,12 @@ def dVdQ_fitting(Qvals, pos_slip, neg_slip, pos_mass, neg_mass):
     Q_n = q_n * neg_mass + neg_slip
     Qarr = np.arange(max(Q_p[0], Q_n[0]), min(Q_p[-1], Q_n[-1]), 0.1)
 
-    Q_p_int = UnivariateSpline(Q_p, v_p, s=0)
+    #Q_p, v_p = monoton_check(Q_p, v_p)
+    #Q_n, v_pn = monoton_check(Q_n, v_n)
+
+    Q_p_int = UnivariateSpline(Q_p, v_p, s=st.session_state['s_pos'])
     V_p_int = Q_p_int(Qarr)
-    Q_n_int = UnivariateSpline(Q_n, v_n, s=0)
+    Q_n_int = UnivariateSpline(Q_n, v_n, s=st.session_state['s_neg'])
     V_n_int = Q_n_int(Qarr)
 
     dVdQ = np.diff(V_p_int) / np.diff(Qarr) - np.diff(V_n_int) / np.diff(Qarr)
@@ -216,12 +259,15 @@ def interpolate_reference(v_n, q_n, v_p, q_p):
     # q_range_n is the range of specific capacity present in the negative reference data, spaced by 0.01
     q_range_n = np.arange(round(min(q_n), 2), round(max(q_n), 2), 0.01)
     # Using UnivariantSpline to interpolate values of v
-    spline_n = UnivariateSpline(q_n, v_n, s=0)
+    
+    #q_n, v_n = monoton_check(q_n, v_n)
+    spline_n = UnivariateSpline(q_n, v_n, s=st.session_state['s_pos'])
     int_v_n = spline_n(q_range_n)
 
     # q_range_p is the range of specific capacity present in the positive reference data, spaced by 0.01
     q_range_p = np.arange(round(min(q_p), 2), round(max(q_p), 2), 0.01)
     # Again, interpolating values of v
+    #q_p, v_p = monoton_check(q_p, v_p)
     spline_p = UnivariateSpline(q_p, v_p, s=0)
     int_v_p = spline_p(q_range_p)
 
@@ -412,6 +458,11 @@ if fullData is not None:
     if posData is not None and negData is not None:
         plot_opts = st.sidebar.selectbox("What would you like to plot?",
                                          ('None', 'Cell Explorer','dV/dQ'))
+        
+        v_n, q_n, v_p, q_p = read_ref(posData, negData)
+        q_n, v_n = monoton_check(q_n, v_n)
+        q_p, v_p = monoton_check(q_p, v_p)
+        
     else:
         plot_opts = st.sidebar.selectbox("What would you like to plot?",
                                          ('None', 'Cell Explorer'))
@@ -419,8 +470,26 @@ if fullData is not None:
     # Selecting available cycle rates
     rates = []
     cyc_nums = []
+    
+    if 'm_pos' not in st.session_state:
+        st.session_state["m_pos"] = 1.0
 
+    if 'm_neg' not in st.session_state:
+        st.session_state["m_neg"] = 1.0
 
+    if 'slip_pos' not in st.session_state:
+        st.session_state["slip_pos"] = 0.0
+
+    if 'slip_neg' not in st.session_state:
+        st.session_state["slip_neg"] = 0.0
+
+    if 's_neg' not in st.session_state:
+        st.session_state['s_neg'] = 0
+        
+    if 's_pos' not in st.session_state:
+        st.session_state['s_pos'] = 0
+        
+    
 
     # For dV/dQ, it is any cycle which has a rate of C/20 or longer
     if plot_opts == 'dV/dQ':
@@ -498,18 +567,6 @@ if fullData is not None:
             if 'dirname' not in st.session_state:
                 st.session_state["dirname"] = ""
 
-            if 'm_pos' not in st.session_state:
-                st.session_state["m_pos"] = 1.0
-
-            if 'm_neg' not in st.session_state:
-                st.session_state["m_neg"] = 1.0
-
-            if 'slip_pos' not in st.session_state:
-                st.session_state["slip_pos"] = 0.0
-
-            if 'slip_neg' not in st.session_state:
-                st.session_state["slip_neg"] = 0.0
-
             if 'slip_neg_min' not in st.session_state:
                 st.session_state["slip_neg_min"] = -45
 
@@ -545,8 +602,9 @@ if fullData is not None:
 
             if 'mass_pos_spacing' not in st.session_state:
                 st.session_state["mass_pos_spacing"] = 0.1
+                
 
-
+                
 
             # ========================================================================== #
             # Windows only feature #
@@ -598,7 +656,7 @@ if fullData is not None:
                 lock_ns = st.checkbox("Lock negative slippage")
 
             # Interpolating the reference data for calculating the dV/dQ curve
-            v_n, q_n, v_p, q_p = read_ref(posData, negData)
+
             dVdq_n, dVdq_p, q_range_p, q_range_n = interpolate_reference(v_n, q_n, v_p, q_p)
 
             brute_expander = st.sidebar.beta_expander("Adjust brute force fit parameters")
@@ -1108,7 +1166,7 @@ if fullData is not None:
 
                         if range_count % freq_int_plots == 0:
 
-                            dVdQ_calc = plotting(Q_me, dVdQ_me, cn, export_plot_bool, display_plots_bool)
+                            dVdQ_meas = plotting(Q_me, dVdQ_me, cn, export_plot_bool, display_plots_bool)
 
                         file.write(str(cn) + "  " + str(round(st.session_state["slip_neg"], 2)) + "  " + str(round(st.session_state["slip_pos"], 2)) +
 
@@ -1201,6 +1259,8 @@ if fullData is not None:
             b = dvdq_plot.vbar(x=[(st.session_state["fit_max"] + st.session_state["fit_min"])/2], width=(st.session_state["fit_max"] -
                                                                                      st.session_state["fit_min"]),
                    bottom=0, top=10, color=['grey'], alpha=0.3)
+
+        #dVdQ_calc = smooth_meas(dVdQ_calc, 35, st.session_state["polyorder"])
 
         if range_or_individual == "Individual":
 
@@ -1298,140 +1358,207 @@ if fullData is not None:
 
     if plot_opts == 'Cell Explorer':
         
-        cell_ex_sel = st.sidebar.radio("What would you like to see?", ["V-Q", "dQ/dV vs. V"])
-        
-        indiv_or_mult = st.sidebar.radio("Display one cycle or multiple at once?", ["One Cycle", "Multiple Cycles"])
-            
-        rates = ['All'] + nd.get_rates()
-        rate = st.sidebar.selectbox("Which C-rate would you like to see?",
-                                        tuple(rates))
-    
-            
-            
-        ncycs = nd.get_ncyc()
-        if rate == 'All':
-            cyc_nums = np.arange(1, ncycs + 1)
+        if posData is not None and negData is not None:
+            cell_ex_sel = st.sidebar.radio("What would you like to see?", ["V-Q", "dQ/dV vs. V", "dV/dQ of Interpolated Reference Data"])
         else:
-            cyc_nums = np.array(nd.select_by_rate(rate))
+            cell_ex_sel = st.sidebar.radio("What would you like to see?", ["V-Q", "dQ/dV vs. V"])
         
-        if indiv_or_mult == "Multiple Cycles":
-
-            # Slider that determines which cycles are displayed depends on which cycle rate was selected (adjusts to only
-            #   include cycles that were done at the selected rate)
-            cyc_range = st.sidebar.select_slider("Cycle Numbers", options=list(cyc_nums), value=(int(min(cyc_nums)),
-                                                                                                 int(max(cyc_nums))))
-            inds = np.where((cyc_nums <= cyc_range[1]) & (cyc_nums >= cyc_range[0]))[0]
-            cycnums = cyc_nums[inds]
-            num_cycs = len(cycnums)
-
-            st.write("Plotting {0} cycles within range: ({1}, {2})".format(rate,
-                                                                           cyc_range[0],
-                                                                           cyc_range[1]))
-        else:
-            cycle = st.sidebar.select_slider("Cycle Numbers", options=list(cyc_nums), value=(int(min(cyc_nums))))
-            num_cycs = 1
-            cycnums = list([cycle])
-            st.write("Plotting cycle: {0}".format(cycnums[0]))
-            
-        # Colour options not working
-        #cmap = st.sidebar.selectbox("Color pallette",
-        #                            ('Default', 'viridis', 'cividis'))
-        #if cmap == 'Default':
-        #    avail_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        #    colors = avail_colors * int(num_cycs / len(avail_colors) + 1)
-        #elif cmap == 'viridis':
-        #    colors = bp.viridis(num_cycs)
-        #elif cmap == 'cividis':
-        #    colors = bp.cividis(num_cycs)
-
-        # For now, no colour options
-        if num_cycs > 255:
-            avail_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-            colors = avail_colors * int(num_cycs / len(avail_colors) + 1)
-        else:
-            colors = bp.viridis(num_cycs)
         
-        if cell_ex_sel == "dQ/dV vs. V":
-
-            if 'window_size' not in st.session_state:
-                st.session_state["window_size"] = 15
-    
-            if 'polyorder' not in st.session_state:
-                st.session_state["polyorder"] = 4
-    
-            # Expander for controlling the smoothing of the measured dVdQ curve
-            smoothing_expander = st.sidebar.beta_expander("Smoothing measured data")
-    
-            with smoothing_expander:
-                smooth_cbox = st.checkbox('Smooth measured data', value=True)
-    
-                st.session_state["polyorder"] = st.number_input(label="Smoothing polynomial order "
-                                                                      "(must be less than window size)", value=
-                                                                st.session_state["polyorder"], min_value=1,
-                                                                max_value=st.session_state["window_size"] - 1)
-    
-                st.session_state["window_size"] = st.slider(label="Window size", min_value=st.session_state["polyorder"] + 1, max_value=31,
-                                                            value=st.session_state["window_size"], step=2)
-    
-    
-    
-            # When checkbox is selected, V-Q plot renders
-            plot_cbox = st.sidebar.checkbox('Plot!')
-    
-            # If user selects the "plot" checkbox, plot will render given the predefined cycle numbers
-            if plot_cbox:
-
-    
-                p = figure(plot_width=600, plot_height=400,
-                           x_axis_label='Potential (V)',
-                           y_axis_label='dQ/dV (mAh/V)')
-    
-                v_list, dqdv_list = dqdv_curves(cycnums, active_mass=None, explore=True)
-    
-                for v, dqdv, color in zip(v_list, dqdv_list, colors):
-                    if smooth_cbox:
-                        dqdv = smooth_meas(dqdv, st.session_state["window_size"], st.session_state["polyorder"])
-                    p.line(v, dqdv,color=color, line_width=2.0)
-    
-                st.bokeh_chart(p)
-    
-        elif cell_ex_sel == 'V-Q':
-
-            active_mass = st.sidebar.number_input("Active material mass (in grams):")
-            if active_mass == 0.0:
-                active_mass = None
+        if cell_ex_sel != 'dV/dQ of Interpolated Reference Data':
+                
+            indiv_or_mult = st.sidebar.radio("Display one cycle or multiple at once?", ["One Cycle", "Multiple Cycles"])
+                
+            rates = ['All'] + nd.get_rates()
+            rate = st.sidebar.selectbox("Which C-rate would you like to see?",
+                                            tuple(rates))
+        
+                
+                
+            ncycs = nd.get_ncyc()
+            if rate == 'All':
+                cyc_nums = np.arange(1, ncycs + 1)
             else:
-                st.write("Calculating specific capacity using {} g active material".format(active_mass))
-
-            # When checkbox is selected, V-Q plot renders
-            plot_cbox = st.sidebar.checkbox('Plot!')
+                cyc_nums = np.array(nd.select_by_rate(rate))
+            
+            if indiv_or_mult == "Multiple Cycles":
     
-            # If user selects the "plot" checkbox, plot will render given the predefined cycle numbers
-            if plot_cbox:
+                # Slider that determines which cycles are displayed depends on which cycle rate was selected (adjusts to only
+                #   include cycles that were done at the selected rate)
+                cyc_range = st.sidebar.select_slider("Cycle Numbers", options=list(cyc_nums), value=(int(min(cyc_nums)),
+                                                                                                     int(max(cyc_nums))))
+                inds = np.where((cyc_nums <= cyc_range[1]) & (cyc_nums >= cyc_range[0]))[0]
+                cycnums = cyc_nums[inds]
+                num_cycs = len(cycnums)
     
-                p = figure(plot_width=800, plot_height=400)
+                st.write("Plotting {0} cycles within range: ({1}, {2})".format(rate,
+                                                                               cyc_range[0],
+                                                                               cyc_range[1]))
+            else:
+                cycle = st.sidebar.select_slider("Cycle Numbers", options=list(cyc_nums), value=(int(min(cyc_nums))))
+                num_cycs = 1
+                cycnums = list([cycle])
+                st.write("Plotting cycle: {0}".format(cycnums[0]))
+                
+            # Colour options not working
+            #cmap = st.sidebar.selectbox("Color pallette",
+            #                            ('Default', 'viridis', 'cividis'))
+            #if cmap == 'Default':
+            #    avail_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+            #    colors = avail_colors * int(num_cycs / len(avail_colors) + 1)
+            #elif cmap == 'viridis':
+            #    colors = bp.viridis(num_cycs)
+            #elif cmap == 'cividis':
+            #    colors = bp.cividis(num_cycs)
     
-                caps, volts = voltage_curves(cycnums, cyctype="cycle", active_mass=active_mass)
+            # For now, no colour options
+            if num_cycs > 255:
+                avail_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+                colors = avail_colors * int(num_cycs / len(avail_colors) + 1)
+            else:
+                colors = bp.viridis(num_cycs)
+            
+            if cell_ex_sel == "dQ/dV vs. V":
     
-                if active_mass is not None:
-                    p.xaxis.axis_label = 'Specific Capacity (mAh/g)'
+                if 'window_size' not in st.session_state:
+                    st.session_state["window_size"] = 15
+        
+                if 'polyorder' not in st.session_state:
+                    st.session_state["polyorder"] = 4
+        
+                # Expander for controlling the smoothing of the measured dVdQ curve
+                smoothing_expander = st.sidebar.beta_expander("Smoothing measured data")
+        
+                with smoothing_expander:
+                    smooth_cbox = st.checkbox('Smooth measured data', value=True)
+        
+                    st.session_state["polyorder"] = st.number_input(label="Smoothing polynomial order "
+                                                                          "(must be less than window size)", value=
+                                                                    st.session_state["polyorder"], min_value=1,
+                                                                    max_value=st.session_state["window_size"] - 1)
+        
+                    st.session_state["window_size"] = st.slider(label="Window size", min_value=st.session_state["polyorder"] + 1, max_value=31,
+                                                                value=st.session_state["window_size"], step=2)
+        
+        
+        
+                # When checkbox is selected, V-Q plot renders
+                plot_cbox = st.sidebar.checkbox('Plot!')
+        
+                # If user selects the "plot" checkbox, plot will render given the predefined cycle numbers
+                if plot_cbox:
+    
+        
+                    p = figure(plot_width=600, plot_height=400,
+                               x_axis_label='Potential (V)',
+                               y_axis_label='dQ/dV (mAh/V)')
+        
+                    v_list, dqdv_list = dqdv_curves(cycnums, active_mass=None, explore=True)
+        
+                    for v, dqdv, color in zip(v_list, dqdv_list, colors):
+                        if smooth_cbox:
+                            dqdv = smooth_meas(dqdv, st.session_state["window_size"], st.session_state["polyorder"])
+                        p.line(v, dqdv,color=color, line_width=2.0)
+        
+                    st.bokeh_chart(p)
+        
+            elif cell_ex_sel == 'V-Q':
+    
+                active_mass = st.sidebar.number_input("Active material mass (in grams):")
+                if active_mass == 0.0:
+                    active_mass = None
                 else:
-                    p.xaxis.axis_label = 'Capacity (mAh)'
-                p.yaxis.axis_label = 'Voltage (V)'
-                for cap, volt, color in zip(caps, volts, colors):
-                    p.line(cap, volt, color=color, line_width=2.0)
+                    st.write("Calculating specific capacity using {} g active material".format(active_mass))
     
-                st.bokeh_chart(p, use_container_width=True)
-    
-            # ========== Windows only ===============#
-            #rel_path = st.text_input("Save figure to: C://")
-            #savepng_button = st.button("Save figure to png!")
-            #savehtml_button = st.button("Save figure to html! (interactive plot)")
-    
-            #home_path = Path("/home/mmemc")
-            #fig_path = home_path / rel_path
-            #if savehtml_button is True:
-            #    save(p, filename="{}.html".format(fig_path))
-            #if savepng_button is True:
-            #    export_png(p, filename="{}.png".format(fig_path))
-            # =======================================#
+                # When checkbox is selected, V-Q plot renders
+                plot_cbox = st.sidebar.checkbox('Plot!')
+        
+                # If user selects the "plot" checkbox, plot will render given the predefined cycle numbers
+                if plot_cbox:
+        
+                    p = figure(plot_width=800, plot_height=400)
+        
+                    caps, volts = voltage_curves(cycnums, cyctype="cycle", active_mass=active_mass)
+        
+                    if active_mass is not None:
+                        p.xaxis.axis_label = 'Specific Capacity (mAh/g)'
+                    else:
+                        p.xaxis.axis_label = 'Capacity (mAh)'
+                    p.yaxis.axis_label = 'Voltage (V)'
+                    for cap, volt, color in zip(caps, volts, colors):
+                        p.line(cap, volt, color=color, line_width=2.0)
+        
+                    st.bokeh_chart(p, use_container_width=True)
+        
+                # ========== Windows only ===============#
+                #rel_path = st.text_input("Save figure to: C://")
+                #savepng_button = st.button("Save figure to png!")
+                #savehtml_button = st.button("Save figure to html! (interactive plot)")
+        
+                #home_path = Path("/home/mmemc")
+                #fig_path = home_path / rel_path
+                #if savehtml_button is True:
+                #    save(p, filename="{}.html".format(fig_path))
+                #if savepng_button is True:
+                #    export_png(p, filename="{}.png".format(fig_path))
+                # =======================================#
+                
+        elif cell_ex_sel == 'dV/dQ of Interpolated Reference Data':
+            ref_type = st.sidebar.radio("Positive or negative reference data?", ['Positive Reference', 'Negative Reference'])
+            
+            if ref_type == 'Positive Reference':
+                #s_neg = st.session_state['s_neg']
+                st.session_state['s_pos'] =  st.sidebar.number_input("s value for the interpolation of the positive reference data:",
+                            value = st.session_state['s_pos'], step=1e-4,format="%.5f")
+                st.sidebar.write('If noisy, increase s. Beware, s should be as small as possible. 1e-5 is reasonable.')
+                
+                
+            else:
+                #s_pos = st.session_state['s_pos']
+                st.session_state['s_neg'] =  st.sidebar.number_input("s value for the interpolation of the negative reference data:",
+                            value = st.session_state['s_neg'], step=1e-4,format="%.5f")
+                st.sidebar.write('If noisy, increase s. Beware, s should be as small as possible. 1e-5 is reasonable.')
+                
+            
+                
+            with st.sidebar.beta_expander("Plot Adjustments"):
+                plot_type = st.radio("Line or scatter plot?", ("Line", "Scatter"))
+                
+                ref_ymin = st.number_input('dV/dQ Y-minimum', value = -0.01)
+                ref_ylim = st.number_input('dV/dQ Y-limit', value=0.01)
+                
+                    
+            with st.sidebar.beta_expander("Active masses and slippages"):
+                    
+                st.session_state["m_pos"] = st.number_input("Positive Mass (g)", value=st.session_state["m_pos"])
+                st.session_state["m_neg"] = st.number_input("Negative Mass (g)", value=st.session_state["m_neg"])
+                st.session_state["slip_pos"] = st.number_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"])
+                st.session_state["slip_neg"] = st.number_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"])
+
+            
+            ref_Q, ref_dVdQ = reference_dVdQ_c(ref_type, st.session_state['s_neg'], st.session_state['s_pos'])
+            #st.session_state['s_neg'] = s_neg
+           # st.session_state['s_pos'] = s_pos
+            
+            
+            ref_fig = figure(plot_width=450, plot_height=250,
+                           y_axis_label='dV/dQ (V/mAh)', x_axis_label='Q (mAh)', y_range=(ref_ymin, ref_ylim))
+            
+            if plot_type == 'Line':
+                ref_dVdQ_curve = ref_fig.line(ref_Q, ref_dVdQ)
+            if plot_type == 'Scatter':
+                ref_dVdQ_curve = ref_fig.circle(ref_Q, ref_dVdQ)
+            st.bokeh_chart(ref_fig, use_container_width=True)
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+
+            

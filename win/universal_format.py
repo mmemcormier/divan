@@ -80,7 +80,7 @@ class UniversalFormat():
             
         t = self.formatted_df["Time"].values
         dt = t[1:] - t[:-1]
-        inds = np.where(dt < 0.0)[0]
+        inds = np.where(dt <= 0.0)[0]
         self.formatted_df = self.formatted_df.drop(inds+1)
         inds = self.formatted_df.index[self.formatted_df["Potential"] < 0.0].tolist()
         self.formatted_df = self.formatted_df.drop(inds)
