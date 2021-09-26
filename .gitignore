@@ -2,6 +2,7 @@
 .directory
 */.streamlit
 */.DS_Store
+tests/dev-debug/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
