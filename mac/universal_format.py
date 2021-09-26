@@ -17,7 +17,7 @@ class UniversalFormat():
 
     def __init__(self, genericfile, all_lines=None):
         ## Parse file to determine what kind of file it is
-
+        
         if all_lines is not None:
             lines = []
             self.genericfile = genericfile
@@ -33,12 +33,13 @@ class UniversalFormat():
 
         if "Cycle ID" == lines[0][:8]:
             self.file_type = FILE_TYPES[0]
-            self.neware = ParseNeware(self.genericfile, all_lines=lines)
-            self.formatted_df = self.neware.get_universal_format()
-
+            parsed_data = ParseNeware(self.genericfile, all_lines=lines)
+            self.formatted_df = parsed_data.get_universal_format()
+            cap_type = parsed_data.cap_type
         else:
 
             self.file_type = FILE_TYPES[1]
+            cap_type = "cum"
             
             headlines = [l.strip().split() for l in lines[:40]]
             for i in range(40):
@@ -71,7 +72,8 @@ class UniversalFormat():
             self.formatted_df.columns = colnames
             self.formatted_df.pop("Date and Time")
             self.formatted_df = self.formatted_df.astype(float)
-
+            
+        
         # Manually add step counter no matter what.
         i = self.formatted_df["Step"]
         self.formatted_df["Prot_step"] = i.ne(i.shift()).cumsum() - 1
@@ -134,6 +136,7 @@ class UniversalFormat():
         print('Found discharge C-rates: {}'.format(dis_crates))
         self.chg_crates = chg_crates
         self.dis_crates = dis_crates
+        self.cap_type = cap_type
 
     def get_ncyc(self):
         '''
@@ -179,13 +182,11 @@ class UniversalFormat():
 
             elif cyctype == 'charge':
                 step = self.step_df.loc[(self.step_df["Step"] == 1) | (self.step_df["Step"] == 5)]
-                #step = self.formatted_df.loc[self.formatted_df['Prot.Step'] == stepnums[0]]
                 if step['C_rate'].values == rate:
                     selected_cycs.append(cycnums[i])
 
             elif cyctype == 'discharge':
                 step = self.step_df.loc[(self.step_df["Step"] == 2) | (self.step_df["Step"] == 6)]
-                #step = self.formatted_df.loc[self.formatted_df['Prot.Step'] == stepnums[-1]]
                 if step['C_rate'].values == rate:
                     selected_cycs.append(cycnums[i])
 
@@ -239,8 +240,11 @@ class UniversalFormat():
                 Cdchg = dis['Capacity'].values
 
                 voltage = np.concatenate((Vchg, Vdchg))
-                capacity = np.concatenate((Cchg, Cdchg))
-                #capacity = np.concatenate((Cchg, -Cdchg+Cchg[-1]))
+                if self.cap_type == "cross":
+                    capacity = np.concatenate((Cchg, -Cdchg+Cchg[-1]))
+                else:
+                    capacity = np.concatenate((Cchg, Cdchg))
+                
 
             else:
                 return None, None

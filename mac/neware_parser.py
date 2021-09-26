@@ -163,6 +163,9 @@ class ParseNeware():
         self.step = pd.read_csv('{}/step.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
         self.rec = pd.read_csv('{}/rec.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
         
+        if self.recunits['Voltage'] == 'mV':
+            self.rec['Voltage'] = self.rec['Voltage'] / 1000
+            self.recunits['Voltage'] = 'V'
         ## =============================================== ##
 
         # Need codes checked
@@ -174,9 +177,94 @@ class ParseNeware():
             "cccv_dchg" : 6
         }
         
+        univ_cols = ["Time", "Cycle", "Step", "Current", "Potential", "Capacity", "Prot_step"]
+        universal_df = pd.DataFrame(columns=univ_cols)
+        
+        t = pd.to_datetime(self.rec["Realtime"], format='%Y-%m-%d %H:%M:%S')
+        delta = t - t[0]
+        universal_df["Time"] = delta.dt.total_seconds()
+        
+        univ_prot_step = self.rec["Step_ID"].values
+        if univ_prot_step[0] > 0:
+            univ_prot_step = univ_prot_step - univ_prot_step[0]
+        universal_df["Prot_step"] = univ_prot_step
+        
+        mapped_steps = self.step["Step_Type"].str.lower().map(step_type)
+        prosteps = self.step["Step_ID"].values
+        if prosteps[0] > 0:
+            prosteps = prosteps - prosteps[0]
+        tmp_df = pd.DataFrame(data={"Step": mapped_steps, "Prot_step": prosteps})
+        universal_df["Step"] = universal_df["Prot_step"].map(tmp_df.set_index("Prot_step")["Step"])
+        
+        # If first cycle does not contain a charge, set to cycle 0. Otherwise cycle 1.
+        universal_df["Cycle"] = self.rec["Cycle_ID"]
+        first_cyc = universal_df.loc[universal_df["Cycle"] == 1]
+        steps = first_cyc["Step"].unique()
+        if (1 not in steps) and (5 not in steps):
+            if universal_df["Cycle"][0] > 0:
+                universal_df["Cycle"] = universal_df["Cycle"] - 1
+        
+        universal_df["Current"] = self.rec["Current"]
+        universal_df["Potential"] = self.rec["Voltage"]
+        universal_df["Capacity"] = self.rec["Capacity"]
+        self.cap_type = "cross"
+        
+        '''
+        # Convert capacity to cumulative.
+        nrec = len(self.rec["Capacity"])
+        cap = np.zeros(nrec, dtype="float")
+        cycnums = universal_df["Cycle"].values
+        ind = 0
+        ref_cap = 0.0
+        if cycnums[0] == 0:
+            start_ind = 1
+            first_cyc = universal_df.loc[universal_df["Cycle"] == 0]
+            prosteps = first_cyc["Prot_step"].unique()
+            for j in range(len(prosteps)):
+                tmp_cap = first_cyc.loc[first_cyc["Prot_step"] == prosteps[j]]["Capacity"].values
+                n = len(tmp_cap)
+                if prosteps[j] not in [2, 6]:     
+                    cap[ind:ind+n] = tmp_cap
+                    #ref_cap = tmp_cap[-1]
+                else:
+                    cap[ind:ind+n] = tmp_cap[-1] - tmp_cap
+                    ref_cap = cap[ind+n-1]
+                ind = ind + n
+        else:
+            start_ind = 0
+        
+        for i in range(start_ind, len(cycnums)):
+            cyc_df = universal_df.loc[universal_df["Cycle"] == cycnums[i]]
+            steps = cyc_df["Step"].unique()
+            for j in range(len(steps)):
+                tmp_cap = cyc_df.loc[cyc_df["Step"] == prosteps[j]]["Capacity"].values
+                n = len(tmp_cap)
+                try:
+                    if prosteps[j] in [1, 5]:
+                        cap[ind:ind+n] = ref_cap + tmp_cap
+                    elif prosteps[j] in [2, 6]:
+                        cap[ind:ind+n] = ref_cap - tmp_cap
+                    elif prosteps[j] not in [1, 2, 5, 6]:
+                    #else:
+                        cap[ind:ind+n] = tmp_cap
+                except:
+                    print(j, cycnums[i], prosteps[j])
+                    
+                    raise SystemExit
+                ref_cap = cap[ind+n-1]
+                ind = ind + n
+
+        universal_df["Capacity"] = cap
+        '''
+        self.universal_df = universal_df
+        
+        ### What is commented below can be removed by John. 
+        ### Just left for his reference.
+        '''
         t_i = datetime.strptime(self.rec["Realtime"][0], '%Y-%m-%d %H:%M:%S')
 
         univ_t = []
+        
         
         for val in self.rec['Realtime'].values.tolist():
             univ_t.append((datetime.strptime(str(val), '%Y-%m-%d %H:%M:%S') - t_i).total_seconds() / 3600)
@@ -226,93 +314,8 @@ class ParseNeware():
         self.universal_format = universal_format
             
         universal_format.to_csv('univ_format.csv', index=False)
-
+        '''
         ## =============================================== ##
-        
-        nstep = self.step['Step_ID'].values[-1]
-#        self.step['C_Rate'] = ['N/A']*nstep
-        step_rates = ['N/A']*nstep
-
-#        try:
-        ncyc = self.get_ncyc()
-        print('Found {} cycles.'.format(ncyc))
-        cycnums = np.arange(1, ncyc+1)
-        chg_cur_max = np.zeros(ncyc)
-        dis_cur_max = np.zeros(ncyc)
-        chg_rates = []
-        chg_crates = []
-        dis_rates = []
-        dis_crates = []
-        cyc_id, dcap = self.get_discap(specific=False)
-#        ref_cap = np.amax(dcap)
-        if ref_cap is None:
-            max_inds = np.argpartition(dcap, -5)[-5:]
-            ref_cap = np.sum(dcap[max_inds]) / 5
-        for i in range(ncyc):
-            cycle = self.rec.loc[self.rec['Cycle_ID'] == cycnums[i]]
-#            print(cycle.columns)
-#            print(cycle['Record_ID'])
-            stepnums = cycle['Step_ID'].unique()
-
-            chg = cycle.loc[cycle['Step_ID'] == stepnums[0]]
-            chg_cur = chg['Current'].values
-            chg_cur_max = np.amax(np.absolute(chg_cur))
-            if chg_cur_max > 0.0:
-                cr = chg_cur_max / ref_cap
-                ind = np.argmin(np.absolute(RATES - cr))
-                chgrate = RATES[ind]
-                if chgrate not in chg_rates:
-                    chg_rates.append(chgrate)
-                    chg_crates.append(C_RATES[ind])
-                step_rates[stepnums[0]-1] = C_RATES[ind]
-
-            dis = cycle.loc[cycle['Step_ID'] == stepnums[-1]]
-            dis_cur = dis['Current'].values
-            dis_cur_max = np.amax(np.absolute(dis_cur))
-            if dis_cur_max > 0.0:
-                cr = dis_cur_max / ref_cap
-                ind = np.argmin(np.absolute(RATES - cr))
-                disrate = RATES[ind]
-                if disrate not in dis_rates:
-                    dis_rates.append(disrate)
-                    dis_crates.append(C_RATES[ind])
-                step_rates[stepnums[-1]-1] = C_RATES[ind]
-
-        self.step['C_rate'] = step_rates
-        print('Found charge C-rates: {}'.format(chg_crates))
-        print('Found discharge C-rates: {}'.format(dis_crates))
-        self.chg_crates = chg_crates
-        self.dis_crates = dis_crates
-
-
-
-        '''
-        # stuff for assinging directly to df instead of writing to file then 
-        # using read_csv(). Issue is dtypes. Pandas infers when reading from file
-        # but not if assigning df from lists. Once resovled, replace csv write/read.
-        cyclnlen = len(cyc[0])
-        if cyclnlen > len(newclabels):
-            d = cyclnlen - len(newclabels)
-            for i in range(d):
-                newclabels.append('NA{}'.format(i+1))
-        steplnlen = len(step[0])
-        if steplnlen > len(newslabels):
-            d = steplnlen - len(newslabels)
-            for i in range(d):
-                newslabels.append('NA{}'.format(i+1))
-        reclnlen = len(rec[0])
-        if reclnlen > len(newrlabels):
-            d = reclnlen - len(newrlabels)
-            for i in range(d):
-                newrlabels.append('NA{}'.format(i+1))
-
-        self.cyc = pd.DataFrame.from_records(cyc, columns=newclabels)
-        self.step = pd.DataFrame.from_records(step, columns=newslabels)
-        self.rec = pd.DataFrame.from_records(rec, columns=newrlabels)
-        '''
-        if self.recunits['Voltage'] == 'mV':
-            self.rec['Voltage'] = self.rec['Voltage'] / 1000
-            self.recunits['Voltage'] = 'V'
 
         # Convert Capacity_Density to mAh/g from mAh/kg. Unit label can be wrong.
         cyc2_df = self.rec.loc[self.rec['Cycle_ID'] == 3]
@@ -327,7 +330,7 @@ class ParseNeware():
         return self.rec
             
     def get_universal_format(self):
-        return self.universal_format
+        return self.universal_df
             
             
     # The following set of functions are designed to be intuitive 
