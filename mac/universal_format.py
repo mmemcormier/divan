@@ -28,7 +28,7 @@ class UniversalFormat():
                     lines.append(line)
         else:
             self.genericfile = genericfile[:-4]
-            with open(genericfile, 'r') as f:
+            with open(genericfile, 'r', encoding='unicode_escape') as f:
                 lines = f.readlines()
 
         if "Cycle ID" == lines[0][:8]:
@@ -80,7 +80,7 @@ class UniversalFormat():
             
         t = self.formatted_df["Time"].values
         dt = t[1:] - t[:-1]
-        inds = np.where(dt < 0.0)[0]
+        inds = np.where(dt <= 0.0)[0]
         self.formatted_df = self.formatted_df.drop(inds+1)
         inds = self.formatted_df.index[self.formatted_df["Potential"] < 0.0].tolist()
         self.formatted_df = self.formatted_df.drop(inds)
@@ -229,7 +229,7 @@ class UniversalFormat():
         elif cyctype == 'cycle':
 
             chg = cycle.loc[(cycle['Step'] == 1) | (cycle['Step'] == 5)]
-            print(len(chg))
+            #print(len(chg))
 
             if len(chg) != 0:
                 Vchg = chg['Potential'].values

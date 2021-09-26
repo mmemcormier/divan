@@ -28,7 +28,7 @@ class UniversalFormat():
                     lines.append(line)
         else:
             self.genericfile = genericfile[:-4]
-            with open(genericfile, 'r') as f:
+            with open(genericfile, 'r', encoding='unicode_escape') as f:
                 lines = f.readlines()
 
         if "Cycle ID" == lines[0][:8]:
@@ -229,7 +229,7 @@ class UniversalFormat():
         elif cyctype == 'cycle':
 
             chg = cycle.loc[(cycle['Step'] == 1) | (cycle['Step'] == 5)]
-            print(len(chg))
+            #print(len(chg))
 
             if len(chg) != 0:
                 Vchg = chg['Potential'].values
