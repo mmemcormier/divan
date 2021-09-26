@@ -180,7 +180,8 @@ class ParseNeware():
         univ_cols = ["Time", "Cycle", "Step", "Current", "Potential", "Capacity", "Prot_step"]
         universal_df = pd.DataFrame(columns=univ_cols)
         
-        t = pd.to_datetime(self.rec["Realtime"], format='%Y-%m-%d %H:%M:%S')
+        #t = pd.to_datetime(self.rec["Realtime"], format='%Y-%m-%d %H:%M:%S')
+        t = pd.to_datetime(self.rec["Realtime"])
         delta = t - t[0]
         universal_df["Time"] = delta.dt.total_seconds()
         

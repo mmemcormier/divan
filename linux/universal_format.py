@@ -28,7 +28,7 @@ class UniversalFormat():
                     lines.append(line)
         else:
             self.genericfile = genericfile[:-4]
-            with open(genericfile, 'r') as f:
+            with open(genericfile, 'r', encoding='unicode_escape') as f:
                 lines = f.readlines()
 
         if "Cycle ID" == lines[0][:8]:
