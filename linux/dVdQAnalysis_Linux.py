@@ -23,6 +23,7 @@ from bokeh.io import export_png
 import tkinter as tk
 from tkinter import filedialog
 import io
+import pandas as pd
 
 
 '''
@@ -73,10 +74,33 @@ def read_data(uploaded_bytes, cell_id):
 # Reading uploaded reference files, and caching data
 @st.cache(persist=True, show_spinner=False)
 def read_ref(pData, nData):
-    v_p, q_p = np.loadtxt(pData, skiprows=1, unpack=True)
-    v_n, q_n = np.loadtxt(nData, skiprows=1, unpack=True)
+    
+    v_n, q_n, v_p, q_p = [], [], [], []
+    plines = []
+    nlines = []
+    if pData.type == 'application/vnd.ms-excel':
+        for line in pData:
+            plines.append(line[:-2].decode("utf-8"))
+        pData_df = pd.DataFrame([r.split(',') for r in plines][1:])
+        
+        v_p = pData_df[0].astype(np.float)
+        q_p = pData_df[1].astype(np.float)
+        
+    else:
+        v_p, q_p = np.loadtxt(pData, skiprows=1, unpack=True)
+        
+    if nData.type == 'application/vnd.ms-excel':
+        for line in nData:
+            nlines.append(line[:-2].decode("utf-8"))
+            
+        nData_df = pd.DataFrame([r.split(',') for r in nlines][1:])
+        v_n = nData_df[0].astype(np.float)
+        q_n = nData_df[1].astype(np.float)
+        
+    else:
+        v_n, q_n = np.loadtxt(nData, skiprows=1, unpack=True)
 
-    return v_n, q_n, v_p, q_p
+    return np.array(v_n), np.array(q_n), np.array(v_p), np.array(q_p)
 
 @st.cache(persist=True, show_spinner=False)
 def voltage_curves(cycnums, cyctype="charge", active_mass=None):
@@ -484,10 +508,10 @@ if fullData is not None:
         st.session_state["slip_neg"] = 0.0
 
     if 's_neg' not in st.session_state:
-        st.session_state['s_neg'] = 0
+        st.session_state['s_neg'] = 0.0
         
     if 's_pos' not in st.session_state:
-        st.session_state['s_pos'] = 0
+        st.session_state['s_pos'] = 0.0
         
     
 
@@ -1219,11 +1243,11 @@ if fullData is not None:
             st.write("X axis range:")
             # If the calculated dVdQ curve exists, then the default x axis minimum is either the lowest x value on the
             #   calculated or 0, whichever is lower
-            if (len(Q) > 0):
-                dvdq_xmin = st.number_input('dV/dQ X-minimum', value=min(min(Q), min(Q_meas)))
+            if (len(Q_meas) > 0):
+                dvdq_xmin = st.number_input('dV/dQ X-minimum', value=min(Q_meas))
             else:
                 dvdq_xmin = 0
-            dvdq_xlim = st.number_input('dV/dQ X-limit', value=max(max(Q), max(Q_meas)))
+            dvdq_xlim = st.number_input('dV/dQ X-limit', value=max(Q_meas))
             st.write("Y axis range:")
             dvdq_ymin = st.number_input('dV/dQ Y-minimum')
             dvdq_ylim = st.number_input('dV/dQ Y-limit', value=0.015)
