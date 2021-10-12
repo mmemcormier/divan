@@ -218,7 +218,7 @@ class UniversalFormat():
                 return None, None
 
         elif cyctype == 'discharge':
-            dis = cycle.loc[cycle['Step'] == 2]
+            dis = cycle.loc[(cycle['Step'] == 2) | (cycle['Step'] == 6)]
 
             if len(dis) != 0:
                 voltage = dis['Potential'].values

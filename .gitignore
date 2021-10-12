@@ -3,6 +3,7 @@
 */.streamlit
 */.DS_Store
 tests/dev-debug/
+linux/debug_data.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
