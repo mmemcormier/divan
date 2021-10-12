@@ -9,7 +9,7 @@ call pip install matplotlib
 pip install bokeh==2.0.2
 pip install selenium geckodriver firefox
 pip install chromedriver-py
-
+streamlit cache clear
 streamlit run dVdQAnalysis_Windows.py
 
 call conda deactivate
