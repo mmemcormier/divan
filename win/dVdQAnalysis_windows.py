@@ -396,10 +396,19 @@ def selectByRate(rate):
 
 
 @st.cache(persist=True, show_spinner=False)
-def dVdQ_rates(newareRates):
-    for r in newareRates:
-        if Fraction(r.replace('C', '1')) <= 1 / 20:
-            rates.append(r)
+def dVdQ_rates(cyclerRates):
+    if '/' in fastest_checkup:
+        checkup = Fraction(fastest_checkup.replace('C','1'))
+    else:
+        checkup = float(fastest_checkup.replace('C',''))
+    
+    for r in cyclerRates:
+        if '/' in r:
+            if Fraction(r.replace('C', '1')) <= checkup:
+                rates.append(r)
+        else:
+            if float(r.replace('C','')) <= checkup:
+                rates.append(r)
     return rates
 
 
@@ -517,6 +526,16 @@ if fullData is not None:
 
     # For dV/dQ, it is any cycle which has a rate of C/20 or longer
     if plot_opts == 'dV/dQ':
+        
+        fastest_checkup = st.sidebar.text_input("Fastest Checkup Cycle (Default is C/20)", value="C/20").upper()
+        
+        # rates is a list which holds all rates which are C/20 or longer
+        rates = dVdQ_rates(uf_rates)
+        
+        if len(rates) == 0:
+            st.error("This file has no c-rates of " + fastest_checkup + " or slower (which is required for dV/dQ Analysis)")
+            st.stop()
+            
 
         # Controls for adjusting plot axes and for toggling between scatter and line plots
         dvdq_plot_expander = st.sidebar.beta_expander("dV/dQ Plot Control")
@@ -532,9 +551,6 @@ if fullData is not None:
 
 
         range_or_individual = st.sidebar.radio("Fit over range of cycles or individual cycle?", ["Individual", "Range"])
-
-        # rates is a list which holds all rates which are C/20 or longer
-        rates = dVdQ_rates(uf_rates)
 
         # Dropdown with selectable cycle rates (based on the 'rates' list)
         rate = st.sidebar.selectbox("Which C-rate would you like to see?",
@@ -1572,9 +1588,6 @@ if fullData is not None:
             if plot_type == 'Scatter':
                 ref_dVdQ_curve = ref_fig.circle(ref_Q, ref_dVdQ)
             st.bokeh_chart(ref_fig, use_container_width=True)
-            
-            
-            
             
             
             
