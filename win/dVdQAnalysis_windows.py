@@ -117,8 +117,8 @@ def voltage_curves(cycnums, cyctype="charge", active_mass=None):
 def dqdv_curves(cycnums, active_mass=None, explore=False):
     V_list = []
     dqdv_list = []
-    for i in range(len(cycnums)):
-        volt, dqdv = nd.get_dQdV(cycnum=cycnums[i])
+    for cycnum in cycnums:
+        volt, dqdv = nd.get_dQdV(cycnum=cycnum)
 
         if explore is False:
             inds = np.argmax(volt)
