@@ -31,7 +31,7 @@ import pandas as pd
 '''
 
 # File selection widget
-file_expander = st.beta_expander("Load files here")
+file_expander = st.expander("Load files here")
 # Expander can be opened or closed using the +/- button to hide the data selection widget
 with file_expander:
     fullData = st.file_uploader("Load Neware data file file here!")
@@ -106,8 +106,8 @@ def read_ref(pData, nData):
 def voltage_curves(cycnums, cyctype="charge", active_mass=None):
     cap_list = []
     volt_list = []
-    for i in range(len(cycnums)):
-        cap, volt = nd.get_vcurve(cycnum=cycnums[i], cyctype=cyctype)
+    for cycnum in cycnums:
+        cap, volt = nd.get_vcurve(cycnum=cycnum, cyctype=cyctype)
         cap_list.append(cap)
         volt_list.append(volt)
 
@@ -538,8 +538,8 @@ if fullData is not None:
             
 
         # Controls for adjusting plot axes and for toggling between scatter and line plots
-        dvdq_plot_expander = st.sidebar.beta_expander("dV/dQ Plot Control")
-        dqdv_plot_expander = st.sidebar.beta_expander("dQ/dV Plot Control")
+        dvdq_plot_expander = st.sidebar.expander("dV/dQ Plot Control")
+        dqdv_plot_expander = st.sidebar.expander("dQ/dV Plot Control")
 
         with dvdq_plot_expander:
             dvdq_plot_type = st.radio("Do you want dV/dQ vs. Q to be a line or scatter plot?", ('Line', 'Scatter'))
@@ -650,7 +650,7 @@ if fullData is not None:
             # Windows only feature #
 
 
-            folder_expander = st.sidebar.beta_expander("Select Folder for Saved Files")
+            folder_expander = st.sidebar.expander("Select Folder for Saved Files")
 
             with folder_expander:
 
@@ -666,7 +666,7 @@ if fullData is not None:
 
 
             # Expander for controlling the smoothing of the measured dVdQ curve
-            smoothing_expander = st.sidebar.beta_expander("Smoothing measured data")
+            smoothing_expander = st.sidebar.expander("Smoothing measured data")
 
             with smoothing_expander:
                 smooth_cbox = st.checkbox('Smooth measured data', value=True)
@@ -684,7 +684,7 @@ if fullData is not None:
                 dVdQ_meas = smooth_meas(dVdQ_meas, st.session_state["window_size"], st.session_state["polyorder"])
                 dQdV_meas = smooth_meas(dQdV_meas, st.session_state["window_size"], st.session_state["polyorder"])
 
-            locking_expander = st.beta_expander("Locking fit parameters")
+            locking_expander = st.expander("Locking fit parameters")
 
             with locking_expander:
                 lock_pm = st.checkbox("Lock positive mass")
@@ -699,7 +699,7 @@ if fullData is not None:
 
             dVdq_n, dVdq_p, q_range_p, q_range_n = interpolate_reference(v_n, q_n, v_p, q_p)
 
-            brute_expander = st.sidebar.beta_expander("Adjust brute force fit parameters")
+            brute_expander = st.sidebar.expander("Adjust brute force fit parameters")
 
             # Adjustment sliders for the brute force fit's parameters (in an expander)
             with brute_expander:
@@ -755,7 +755,7 @@ if fullData is not None:
 
             if range_or_individual == "Individual":
                 # Expander for specifying the capacity range over which the fit will work
-                fit_range_expander = st.sidebar.beta_expander("Fit over specified range")
+                fit_range_expander = st.sidebar.expander("Fit over specified range")
 
                 with fit_range_expander:
                     fit_range_cbox = st.checkbox('Fit over specified range')
@@ -881,7 +881,7 @@ if fullData is not None:
                                               st.session_state["m_pos"],
                                               st.session_state["m_neg"])
 
-                slider_expander = st.sidebar.beta_expander("Adjust active mass and slippages")
+                slider_expander = st.sidebar.expander("Adjust active mass and slippages")
 
                 with slider_expander:
                     st.session_state["m_pos"] = st.number_input("Positive Mass (g)", value=st.session_state["m_pos"])
@@ -902,11 +902,11 @@ if fullData is not None:
 
                 fit_range_cbox = False
 
-                intermediate_fits = st.sidebar.beta_expander("Plot intermediate fits")
+                intermediate_fits = st.sidebar.expander("Plot intermediate fits")
 
-                multi_fit_expander = st.sidebar.beta_expander("Fit Over Specified Range")
+                multi_fit_expander = st.sidebar.expander("Fit Over Specified Range")
 
-                plot_parameter_expander = st.sidebar.beta_expander("Plot parameters vs. cycle number")
+                plot_parameter_expander = st.sidebar.expander("Plot parameters vs. cycle number")
 
                 with plot_parameter_expander:
                     display_parameter_plots = st.checkbox("Display fit parameters vs. cycle number")
@@ -1466,19 +1466,21 @@ if fullData is not None:
                     st.session_state["polyorder"] = 4
         
                 # Expander for controlling the smoothing of the measured dVdQ curve
-                smoothing_expander = st.sidebar.beta_expander("Smoothing measured data")
+                smoothing_expander = st.sidebar.expander("Smoothing measured data")
         
                 with smoothing_expander:
                     smooth_cbox = st.checkbox('Smooth measured data', value=True)
-        
-                    st.session_state["polyorder"] = st.number_input(label="Smoothing polynomial order "
-                                                                          "(must be less than window size)", value=
-                                                                    st.session_state["polyorder"], min_value=1,
-                                                                    max_value=st.session_state["window_size"] - 1)
-        
-                    st.session_state["window_size"] = st.slider(label="Window size", min_value=st.session_state["polyorder"] + 1, max_value=31,
-                                                                value=st.session_state["window_size"], step=2)
-        
+                    
+                    if smooth_cbox:
+            
+                        st.session_state["polyorder"] = st.number_input(label="Smoothing polynomial order "
+                                                                              "(must be less than window size)", value=
+                                                                        int(st.session_state["polyorder"]), min_value=1,
+                                                                        max_value=int(st.session_state["window_size"] - 1.0), step=2)
+            
+                        st.session_state["window_size"] = st.slider(label="Window size", min_value=int(st.session_state["polyorder"] + 1), max_value=31,
+                                                                    value=int(st.session_state["window_size"]), step=2)
+            
         
         
                 # When checkbox is selected, V-Q plot renders
@@ -1496,7 +1498,7 @@ if fullData is not None:
         
                     for v, dqdv, color in zip(v_list, dqdv_list, colors):
                         if smooth_cbox:
-                            dqdv = smooth_meas(dqdv, st.session_state["window_size"], st.session_state["polyorder"])
+                            dqdv = smooth_meas(dqdv, int(st.session_state["window_size"]), int(st.session_state["polyorder"]))
                         p.line(v, dqdv,color=color, line_width=2.0)
         
                     st.bokeh_chart(p)
@@ -1560,14 +1562,14 @@ if fullData is not None:
                 
             
                 
-            with st.sidebar.beta_expander("Plot Adjustments"):
+            with st.sidebar.expander("Plot Adjustments"):
                 plot_type = st.radio("Line or scatter plot?", ("Line", "Scatter"))
                 
                 ref_ymin = st.number_input('dV/dQ Y-minimum', value = -0.01)
                 ref_ylim = st.number_input('dV/dQ Y-limit', value=0.01)
                 
                     
-            with st.sidebar.beta_expander("Active masses and slippages"):
+            with st.sidebar.expander("Active masses and slippages"):
                     
                 st.session_state["m_pos"] = st.number_input("Positive Mass (g)", value=st.session_state["m_pos"])
                 st.session_state["m_neg"] = st.number_input("Negative Mass (g)", value=st.session_state["m_neg"])
