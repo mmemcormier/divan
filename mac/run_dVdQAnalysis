@@ -3,5 +3,5 @@ cd "$(dirname "$0")"
 eval "$(conda shell.bash hook)"
 conda env create --file dVdQAnalysis.yml
 conda activate dVdQAnalysis
-streamlit run dVdQAnalysis_Mac.py
+streamlit run divan_mac.py
 conda deactivate
