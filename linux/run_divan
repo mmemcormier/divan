@@ -6,5 +6,5 @@ conda activate dVdQAnalysis
 pip install chromedriver-py
 pip install seleniumgeckodriver firefox
 streamlit cache clear
-streamlit run dVdQAnalysis_Mac.py
+streamlit run dVdQAnalysis_Linux.py
 conda deactivate
