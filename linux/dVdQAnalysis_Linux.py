@@ -78,27 +78,30 @@ def read_ref(pData, nData):
     v_n, q_n, v_p, q_p = [], [], [], []
     plines = []
     nlines = []
-    if pData.type == 'application/vnd.ms-excel':
+
+    try:
+        v_p, q_p = np.loadtxt(pData, skiprows=1, unpack=True)
+
+    except:
         for line in pData:
             plines.append(line[:-2].decode("utf-8"))
         pData_df = pd.DataFrame([r.split(',') for r in plines][1:])
-        
+
         v_p = pData_df[0].astype(np.float)
         q_p = pData_df[1].astype(np.float)
+
+
+    try:
+        v_n, q_n = np.loadtxt(nData, skiprows=1, unpack=True)
         
-    else:
-        v_p, q_p = np.loadtxt(pData, skiprows=1, unpack=True)
-        
-    if nData.type == 'application/vnd.ms-excel':
+    except:
         for line in nData:
             nlines.append(line[:-2].decode("utf-8"))
-            
+
         nData_df = pd.DataFrame([r.split(',') for r in nlines][1:])
         v_n = nData_df[0].astype(np.float)
         q_n = nData_df[1].astype(np.float)
-        
-    else:
-        v_n, q_n = np.loadtxt(nData, skiprows=1, unpack=True)
+
 
     return np.array(v_n), np.array(q_n), np.array(v_p), np.array(q_p)
 
