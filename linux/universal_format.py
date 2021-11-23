@@ -36,11 +36,70 @@ class UniversalFormat():
             parsed_data = ParseNeware(self.genericfile, all_lines=lines)
             self.formatted_df = parsed_data.get_universal_format()
             cap_type = parsed_data.cap_type
+            
         else:
 
             self.file_type = FILE_TYPES[1]
             cap_type = "cum"
             
+            nlines = len(lines)
+            headlines = []
+            for i in range(nlines):
+                headlines.append(lines[i])
+                l = lines[i].strip().split()
+                if l[0][:6] == '[Data]':
+                    hline = lines[i+1]
+                    nskip = i+1
+                    break
+            
+            header = ''.join(headlines)
+            
+            # find mass and theoretical cap using re on header str
+            m = re.search('Mass\s+\(.*\):\s+(\d+)?\.\d+', header)
+            m = m.group(0).split()
+            mass_units = m[1][1:-2]
+            if mass_units == 'mg':
+                self.mass = float(m[-1]) / 1000
+            else:
+                self.mass = float(m[-1])
+            
+            m = re.search('Capacity\s+(.*):\s+(\d+)?\.\d+', header)
+            m = m.group(0).split()
+            cap_units = m[1][1:-2]
+            if cap_units == 'mAHr':
+                self.input_cap = float(m[-1]) / 1000
+            else:
+                self.input_cap = float(m[-1])
+                
+            m = re.search('Cell: .+?(?=,|\\n)', header)
+            m = m.group(0).split()
+            self.cellname = m[-1]
+            
+            cols = hline.strip().split(",")
+            self.formatted_df = pd.DataFrame([r.split(",") for r in lines[nskip+1:]],
+                                             columns=cols)
+            self.formatted_df.pop("Date and Time")
+            
+            #self.formatted_df = self.formatted_df.astype(float)
+            
+            self.formatted_df.rename(columns={'Capacity (Ah)': 'Capacity',
+                                              'Potential (V)': 'Potential',
+                                              'Run Time (h)': 'Time',
+                                              'Time (h)': 'Time',
+                                              'Current (A)': 'Current',
+                                              'Cycle Number': 'Cycle',
+                                              'Meas I (A)': 'Current',
+                                              'Step Type': 'Step',
+                                              'Step Number': 'Step'},
+                                    inplace=True)
+            print(self.formatted_df.columns)
+            # Add Prot_step column even if step num exists.
+            s = self.formatted_df.Step
+            self.formatted_df['Prot_step'] = s.ne(s.shift()).cumsum() - 1
+            self.formatted_df = self.formatted_df.apply(pd.to_numeric)
+            
+            
+            '''
             headlines = [l.strip().split() for l in lines[:40]]
             for i in range(40):
                 if len(headlines[i]) > 0:
@@ -67,6 +126,7 @@ class UniversalFormat():
                     colnames[i] = "Capacity"
                 elif hline[i] == "Potential (V)":
                     colnames[i] = "Potential"
+            
 
             self.formatted_df = pd.DataFrame([r.split(",") for r in lines][hlinenum+1:])
             self.formatted_df.columns = colnames
@@ -77,6 +137,7 @@ class UniversalFormat():
         # Manually add step counter no matter what.
         i = self.formatted_df["Step"]
         self.formatted_df["Prot_step"] = i.ne(i.shift()).cumsum() - 1
+        '''
             
         t = self.formatted_df["Time"].values
         dt = t[1:] - t[:-1]
