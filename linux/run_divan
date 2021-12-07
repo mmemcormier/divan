@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+cd "$(dirname "$0")"
+eval "$(conda shell.bash hook)"
+conda env create --file dVdQAnalysis.yml
+conda activate dVdQAnalysis
+pip install chromedriver-py
+pip install seleniumgeckodriver firefox
+streamlit cache clear
+streamlit run dVdQAnalysis_Linux.py
+conda deactivate
