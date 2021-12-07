@@ -266,7 +266,8 @@ class UniversalFormat():
         return selected_cycs
     
     
-    def get_discap(self, x_var='cycnum', rate=None, normcyc=None, specific=False):
+    def get_discap(self, x_var='cycnum', rate=None, normcyc=None,
+                   specific=False, vrange=None):
         '''
         Return discharge capacity 
         x_var: {'cycnum', 'time'}
@@ -284,7 +285,15 @@ class UniversalFormat():
         x = np.zeros(ncycs)
         for i in range(ncycs):
             cyc_df = self.formatted_df.loc[self.formatted_df['Cycle'] == selected_cycs[i]]
+
             cap = cyc_df['Capacity'].values
+            if vrange is not None:
+                new_df = cyc_df.loc[(cyc_df['Potential'] > vrange[0]) & (cyc_df['Potential'] < vrange[1])]
+                
+                cap = new_df['Capacity'].values
+                if len(cap) < 2:
+                    continue
+                
             caps[i] = np.absolute(np.amax(cap) - np.amin(cap))
             if x_var == 'time':
                 time = cyc_df['Time'].values
