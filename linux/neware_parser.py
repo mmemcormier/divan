@@ -183,7 +183,7 @@ class ParseNeware():
         #t = pd.to_datetime(self.rec["Realtime"], format='%Y-%m-%d %H:%M:%S')
         t = pd.to_datetime(self.rec["Realtime"])
         delta = t - t[0]
-        universal_df["Time"] = delta.dt.total_seconds()
+        universal_df["Time"] = delta.dt.total_seconds() / 3600 # Hours
         
         univ_prot_step = self.rec["Step_ID"].values
         if univ_prot_step[0] > 0:

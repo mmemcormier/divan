@@ -6,7 +6,7 @@ import re
 from argparse import ArgumentParser
 from datetime import datetime
 from neware_parser import ParseNeware
-import streamlit as st
+#import streamlit as st
 
 CYC_TYPES = {'charge', 'discharge', 'cycle'}
 RATES = np.array([1/160, 1/80, 1/40, 1/20, 1/10, 1/5, 1/4, 1/3, 1/2, 1, 2, 3, 4, 5, 10])
@@ -203,9 +203,20 @@ class UniversalFormat():
         '''
         Returns the total number of cycles.
         '''
+        
         return int(self.formatted_df['Cycle'].values[-1])
+    
+    def get_cycnums(self):
+        
+        return self.formatted_df['Cycle'].values
+    
 
     def get_rates(self, cyctype='cycle'):
+        '''
+        Return unique C-rates for cyctype.
+        cyctype: {'cycle', 'charge', 'discharge'}
+        '''
+        
         if cyctype not in CYC_TYPES:
             raise ValueError('cyctype must be one of {0}'.format(CYC_TYPES))
         if cyctype == 'charge':
@@ -240,19 +251,51 @@ class UniversalFormat():
             if cyctype == 'cycle':
                 if len(stepnums) >= 2:
                     selected_cycs.append(cycnums[i])
-
+            # charge and discharge rate selection fails. 
+            # step['C_rates'].values returns a list.
             elif cyctype == 'charge':
-                step = self.step_df.loc[(self.step_df["Step"] == 1) | (self.step_df["Step"] == 5)]
+                step = self.step_df.loc[(self.step_df["Prot_step"] == 1) | (self.step_df["Prot_step"] == 5)]
                 if step['C_rate'].values == rate:
                     selected_cycs.append(cycnums[i])
 
             elif cyctype == 'discharge':
-                step = self.step_df.loc[(self.step_df["Step"] == 2) | (self.step_df["Step"] == 6)]
-                if step['C_rate'].values == rate:
+                step = self.step_df.loc[(self.step_df["Prot_step"] == 2) | (self.step_df["Prot_step"] == 6)]
+                if step['C_rates'].values == rate:
                     selected_cycs.append(cycnums[i])
 
         return selected_cycs
+    
+    
+    def get_discap(self, x_var='cycnum', rate=None, normcyc=None, specific=False):
+        '''
+        Return discharge capacity 
+        x_var: {'cycnum', 'time'}
+        '''
+        
 
+        if rate is not None:
+            selected_cycs = self.select_by_rate(rate, cyctype='cycle')
+        else:
+            selected_cycs = self.get_cycnums()
+        ncycs = len(selected_cycs)
+            
+        
+        caps  = np.zeros(ncycs)
+        x = np.zeros(ncycs)
+        for i in range(ncycs):
+            cyc_df = self.formatted_df.loc[self.formatted_df['Cycle'] == selected_cycs[i]]
+            cap = cyc_df['Capacity'].values
+            caps[i] = np.absolute(np.amax(cap) - np.amin(cap))
+            if x_var == 'time':
+                time = cyc_df['Time'].values
+                x[i] = time[-1]
+            else:
+                x[i] = selected_cycs[i]
+                
+        if normcyc is not None:
+            caps = caps / caps[normcyc - 1]
+        
+        return x, caps
     
     def get_vcurve(self, cycnum=-1, cyctype='cycle', active_mass=None):
 
