@@ -15,7 +15,7 @@ FILE_TYPES = ["Neware", "Novonix"]
 
 class UniversalFormat():
 
-    def __init__(self, genericfile, all_lines=None):
+    def __init__(self, genericfile, all_lines=None, ref_cap=None):
         ## Parse file to determine what kind of file it is
         
         if all_lines is not None:
@@ -33,7 +33,7 @@ class UniversalFormat():
 
         if "Cycle ID" == lines[0][:8]:
             self.file_type = FILE_TYPES[0]
-            parsed_data = ParseNeware(self.genericfile, all_lines=lines)
+            parsed_data = ParseNeware(self.genericfile, all_lines=lines, ref_cap=ref_cap)
             self.formatted_df = parsed_data.get_universal_format()
             cap_type = parsed_data.cap_type
             
@@ -80,7 +80,6 @@ class UniversalFormat():
                                              columns=cols)
             self.formatted_df.pop("Date and Time")
             
-            #self.formatted_df = self.formatted_df.astype(float)
             
             self.formatted_df.rename(columns={'Capacity (Ah)': 'Capacity',
                                               'Potential (V)': 'Potential',
@@ -142,6 +141,8 @@ class UniversalFormat():
         t = self.formatted_df["Time"].values
         dt = t[1:] - t[:-1]
         inds = np.where(dt <= 0.0)[0]
+        #if len(inds) > 0:
+            #print("Removing indices due to time non-monotonicity: {}".format(inds))
         self.formatted_df = self.formatted_df.drop(inds+1)
         inds = self.formatted_df.index[self.formatted_df["Potential"] < 0.0].tolist()
         self.formatted_df = self.formatted_df.drop(inds)

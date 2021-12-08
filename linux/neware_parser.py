@@ -162,6 +162,9 @@ class ParseNeware():
         self.cyc = pd.read_csv('{}/cyc.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
         self.step = pd.read_csv('{}/step.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
         self.rec = pd.read_csv('{}/rec.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
+
+        self.step["Step_Type"] = self.step["Step_Type"].str.strip()
+        #print(self.step["Step_Type"].unique())
         
         if self.recunits['Voltage'] == 'mV':
             self.rec['Voltage'] = self.rec['Voltage'] / 1000
@@ -191,6 +194,7 @@ class ParseNeware():
         universal_df["Prot_step"] = univ_prot_step
         
         mapped_steps = self.step["Step_Type"].str.lower().map(step_type)
+        #print(mapped_steps.unique())
         prosteps = self.step["Step_ID"].values
         if prosteps[0] > 0:
             prosteps = prosteps - prosteps[0]
