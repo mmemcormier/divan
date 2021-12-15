@@ -8,7 +8,7 @@ from datetime import datetime
 from neware_parser import ParseNeware
 #import streamlit as st
 
-CYC_TYPES = {'charge', 'discharge', 'cycle'}
+CYC_TYPES = {'charge', 'chg', 'discharge', 'dis', 'cycle', 'cyc'}
 RATES = np.array([1/160, 1/80, 1/40, 1/20, 1/10, 1/5, 1/4, 1/3, 1/2, 1, 2, 3, 4, 5, 10])
 C_RATES = ['C/160', 'C/80', 'C/40', 'C/20', 'C/10', 'C/5', 'C/4', 'C/3', 'C/2', '1C', '2C', '3C', '4C', '5C', '10C']
 FILE_TYPES = ["Neware", "Novonix"]
@@ -17,6 +17,8 @@ class UniversalFormat():
 
     def __init__(self, genericfile, all_lines=None, ref_cap=None):
         ## Parse file to determine what kind of file it is
+        
+        self.ref_cap = ref_cap
         
         if all_lines is not None:
             lines = []
@@ -33,7 +35,7 @@ class UniversalFormat():
 
         if "Cycle ID" == lines[0][:8]:
             self.file_type = FILE_TYPES[0]
-            parsed_data = ParseNeware(self.genericfile, all_lines=lines, ref_cap=ref_cap)
+            parsed_data = ParseNeware(self.genericfile, all_lines=lines)
             self.formatted_df = parsed_data.get_universal_format()
             cap_type = parsed_data.cap_type
             
@@ -63,13 +65,14 @@ class UniversalFormat():
             else:
                 self.mass = float(m[-1])
             
-            m = re.search('Capacity\s+(.*):\s+(\d+)?\.\d+', header)
-            m = m.group(0).split()
-            cap_units = m[1][1:-2]
-            if cap_units == 'mAHr':
-                self.input_cap = float(m[-1]) / 1000
-            else:
-                self.input_cap = float(m[-1])
+            if self.ref_cap is None:
+                m = re.search('Capacity\s+(.*):\s+(\d+)?\.\d+', header)
+                m = m.group(0).split()
+                cap_units = m[1][1:-2]
+                if cap_units == 'mAHr':
+                    self.ref_cap = float(m[-1]) / 1000
+                else:
+                    self.ref_cap = float(m[-1])
                 
             m = re.search('Cell: .+?(?=,|\\n)', header)
             m = m.group(0).split()
@@ -94,49 +97,9 @@ class UniversalFormat():
             print(self.formatted_df.columns)
             # Add Prot_step column even if step num exists.
             s = self.formatted_df.Step
-            self.formatted_df['Prot_step'] = s.ne(s.shift()).cumsum() - 1
-            self.formatted_df = self.formatted_df.apply(pd.to_numeric)
+            self.formatted_df["Prot_step"] = s.ne(s.shift()).cumsum() - 1
+            self.formatted_df = self.formatted_df.apply(pd.to_numeric) 
             
-            
-            '''
-            headlines = [l.strip().split() for l in lines[:40]]
-            for i in range(40):
-                if len(headlines[i]) > 0:
-                    if headlines[i][0] == '[Data]':
-                        hlinenum = i + 1
-                        break
-            hline = lines[hlinenum].strip().split(",")
-            #print(hline)
-            #print(len(hline))
-            colnames = hline.copy()
-            # Change column names manually.
-            for i in range(len(hline)):
-                if hline[i] == "Cycle Number":
-                    colnames[i] = "Cycle"
-                elif (hline[i] == "Step Number") & ("Step Type" not in hline):
-                    colnames[i] = "Step"
-                elif hline[i] == "Step Type":
-                    colnames[i] = "Step"
-                elif hline[i] == "Current (A)":
-                    colnames[i] = "Current"
-                elif hline[i] == "Run Time (h)":
-                    colnames[i] = "Time"
-                elif hline[i] == "Capacity (Ah)":
-                    colnames[i] = "Capacity"
-                elif hline[i] == "Potential (V)":
-                    colnames[i] = "Potential"
-            
-
-            self.formatted_df = pd.DataFrame([r.split(",") for r in lines][hlinenum+1:])
-            self.formatted_df.columns = colnames
-            self.formatted_df.pop("Date and Time")
-            self.formatted_df = self.formatted_df.astype(float)
-            
-        
-        # Manually add step counter no matter what.
-        i = self.formatted_df["Step"]
-        self.formatted_df["Prot_step"] = i.ne(i.shift()).cumsum() - 1
-        '''
             
         t = self.formatted_df["Time"].values
         dt = t[1:] - t[:-1]
@@ -150,7 +113,11 @@ class UniversalFormat():
         
         cap = self.formatted_df["Capacity"].values
         max_inds = np.argpartition(cap, -5)[-5:]
-        ref_cap = np.sum(cap[max_inds]) / 5
+        if self.ref_cap is None:
+            self.ref_cap = np.sum(cap[max_inds]) / 5
+            print("WARNING: Using {0:.8f} mAh to compute rates " \
+                  "-> the mean of the 5 largest capacities found in the file.".format(self.ref_cap))
+                  
         cycnums = np.arange(1, 1 + self.get_ncyc())
         
         stepnums = self.formatted_df["Prot_step"].unique()
@@ -170,7 +137,7 @@ class UniversalFormat():
                 chg_cur = step["Current"].values
                 chg_cur_max = np.amax(np.absolute(chg_cur))
                 if chg_cur_max > 0.0:
-                    cr = chg_cur_max / ref_cap
+                    cr = chg_cur_max / self.ref_cap
                     ind = np.argmin(np.absolute(RATES - cr))
                     chgrate = RATES[ind]
                     if chgrate not in chg_rates:
@@ -182,7 +149,7 @@ class UniversalFormat():
                 dis_cur = step["Current"].values
                 dis_cur_max = np.amax(np.absolute(dis_cur))
                 if dis_cur_max > 0.0:
-                    cr = dis_cur_max / ref_cap
+                    cr = dis_cur_max / self.ref_cap
                     ind = np.argmin(np.absolute(RATES - cr))
                     disrate = RATES[ind]
                     if disrate not in dis_rates:
@@ -199,6 +166,10 @@ class UniversalFormat():
         self.chg_crates = chg_crates
         self.dis_crates = dis_crates
         self.cap_type = cap_type
+        # Get step types for each prot_step
+        ds = self.formatted_df["Step"].ne(self.formatted_df["Step"].shift())
+        self.step_df["Step"] = self.formatted_df.loc[ds]["Step"].values
+
 
     def get_ncyc(self):
         '''
@@ -235,7 +206,7 @@ class UniversalFormat():
         '''
         Return record data for all cycles that have a particular rate.
         rate: dtype=string.
-        cyctype: {'cycle', 'charge', 'discharge'}
+        cyctype: {'cycle', 'cyc', 'charge', ' chg', 'discharge', 'dis'}
         '''
         
         if rate not in C_RATES:
@@ -244,31 +215,32 @@ class UniversalFormat():
         if cyctype not in CYC_TYPES:
             raise ValueError('cyctype must be one of {0}'.format(CYC_TYPES))
 
-        selected_cycs = []
-        cycles = self.step_df.loc[self.step_df["C_rates"] == rate]
-        cycnums = cycles['Cycle'].unique()
-        for i in range(len(cycnums)):
-            stepnums = cycles.loc[cycles['Cycle'] == cycnums[i]].values
-            if cyctype == 'cycle':
+        if cyctype in ['cycle', 'cyc']:
+            selected_cycs = []
+            cycles = self.step_df.loc[self.step_df["C_rates"] == rate]
+            cycnums = cycles["Cycle"].unique()
+            for i in range(len(cycnums)):
+                steps_df = cycles.loc[cycles["Cycle"] == cycnums[i]]
+                stepnums = steps_df["Prot_step"].values
+    
                 if len(stepnums) >= 2:
                     selected_cycs.append(cycnums[i])
-            # charge and discharge rate selection fails. 
-            # step['C_rates'].values returns a list.
-            elif cyctype == 'charge':
-                step = self.step_df.loc[(self.step_df["Prot_step"] == 1) | (self.step_df["Prot_step"] == 5)]
-                if step['C_rate'].values == rate:
-                    selected_cycs.append(cycnums[i])
 
-            elif cyctype == 'discharge':
-                step = self.step_df.loc[(self.step_df["Prot_step"] == 2) | (self.step_df["Prot_step"] == 6)]
-                if step['C_rates'].values == rate:
-                    selected_cycs.append(cycnums[i])
+        elif cyctype in ['charge', 'chg']:
+            chg_df = self.step_df.loc[((self.step_df["Step"] == 1) | (self.step_df["Step"] == 5)) & (self.step_df["C_rates"] == rate)]
+            selected_cycs = chg_df["Cycle"].values
+
+        elif cyctype in ['discharge', 'dis']:
+            dis_df = self.step_df.loc[((self.step_df["Step"] == 2) | (self.step_df["Step"] == 6)) & (self.step_df["C_rates"] == rate)]
+            selected_cycs = dis_df["Cycle"].values
+
+        #print(selected_cycs)
 
         return selected_cycs
     
     
-    def get_discap(self, x_var='cycnum', rate=None, normcyc=None,
-                   specific=False, vrange=None):
+    def get_discap(self, x_var='cycnum', rate=None, cyctype='cycle', 
+                   normcyc=None, specific=False, vrange=None):
         '''
         Return discharge capacity 
         x_var: {'cycnum', 'time'}
@@ -276,7 +248,7 @@ class UniversalFormat():
         
 
         if rate is not None:
-            selected_cycs = self.select_by_rate(rate, cyctype='cycle')
+            selected_cycs = self.select_by_rate(rate, cyctype=cyctype)
         else:
             selected_cycs = self.get_cycnums()
         ncycs = len(selected_cycs)

@@ -2,7 +2,9 @@
 
 import numpy as np
 import pandas as pd
-from os import path
+#from os import path
+import os
+#Should use pathlib instead
 from scipy.integrate import simps
 import re
 from argparse import ArgumentParser
@@ -152,16 +154,21 @@ class ParseNeware():
         with open('{}/cyc.dat'.format(tmp_path), 'w') as f:
             for l in cyc:
                 f.write(l)
+        self.cyc = pd.read_csv('{}/cyc.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
+        os.remove('{}/cyc.dat'.format(tmp_path))
+            
         with open('{}/step.dat'.format(tmp_path), 'w') as f:
             for l in step:
                 f.write(l)
+        self.step = pd.read_csv('{}/step.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
+        os.remove('{}/step.dat'.format(tmp_path))
+            
         with open('{}/rec.dat'.format(tmp_path), 'w') as f:
             for l in rec:
                 f.write(l)
-
-        self.cyc = pd.read_csv('{}/cyc.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
-        self.step = pd.read_csv('{}/step.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
         self.rec = pd.read_csv('{}/rec.dat'.format(tmp_path), sep='\t+', header=0, engine='python')
+        os.remove('{}/rec.dat'.format(tmp_path))
+
 
         self.step["Step_Type"] = self.step["Step_Type"].str.strip()
         #print(self.step["Step_Type"].unique())
@@ -171,7 +178,7 @@ class ParseNeware():
             self.recunits['Voltage'] = 'V'
         ## =============================================== ##
 
-        # Need codes checked
+        # Need codes checked - I think NVX has CCCV as 7 (CC-chg), 9 (CV-chg) and 8 (CC-dis), 10 (CV-dis)
         step_type = {
             "rest" : 0,
             "cc_dchg" : 2,
@@ -263,63 +270,7 @@ class ParseNeware():
         '''
         self.universal_df = universal_df
         
-        ### What is commented below can be removed by John. 
-        ### Just left for his reference.
-        '''
-        t_i = datetime.strptime(self.rec["Realtime"][0], '%Y-%m-%d %H:%M:%S')
 
-        univ_t = []
-        
-        
-        for val in self.rec['Realtime'].values.tolist():
-            univ_t.append((datetime.strptime(str(val), '%Y-%m-%d %H:%M:%S') - t_i).total_seconds() / 3600)
-         
-        univ_cyc = self.rec["Cycle_ID"].values.tolist()
-        
-        univ_prot_step = np.array(self.rec["Step_ID"].values.tolist())
-        if univ_prot_step[0] != 0:
-            univ_prot_step -= univ_prot_step[0]
-       
-        
-        univ_step_code = []
-        
-        for val in univ_prot_step:
-            univ_step_code.append(step_type[self.step["Step_Type"][val].lower()])
-#            univ_step_code.append(step_type[self.step["Step_Name"][val].lower()])
-            
-        univ_curr = []
-            
-        for val in self.rec["Current"].values.tolist():
-            univ_curr.append(val)
-            
-        univ_v = []
-            
-        for val in self.rec["Voltage"].values.tolist():
-            univ_v.append(val)
-            
-        univ_q = []
-        
-        for val in self.rec["Capacity"].values.tolist():
-            univ_q.append(val)
-            
-        univ_cd = []
-        
-        for val in self.rec["Capacity_Density"].values.tolist():
-            univ_cd.append(val)
-
-        
-        univ_df_rows = []
-        univ_cols = ["Time", "Cycle", "Step", "Current", "Potential", "Capacity", "Prot_step", "Capacity_Density"]
-        
-        for i in range(len(univ_q)):
-            univ_df_rows.append([univ_t[i], univ_cyc[i], univ_step_code[i], univ_curr[i], univ_v[i], univ_q[i], univ_prot_step[i], univ_cd[i]])
-                     
-        universal_format = pd.DataFrame(univ_df_rows, columns=univ_cols)
-        
-        self.universal_format = universal_format
-            
-        universal_format.to_csv('univ_format.csv', index=False)
-        '''
         ## =============================================== ##
 
         # Convert Capacity_Density to mAh/g from mAh/kg. Unit label can be wrong.
