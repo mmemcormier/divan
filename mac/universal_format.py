@@ -236,7 +236,9 @@ class UniversalFormat():
 
 
         return selected_cycs
-    
+
+    def get_potential(self):
+        return self.formatted_df["Potential"]
     
     def get_discap(self, x_var='cycnum', rate=None, cyctype='cycle', 
                    normcyc=None, specific=False, vrange=None):
@@ -244,7 +246,6 @@ class UniversalFormat():
         Return discharge capacity 
         x_var: {'cycnum', 'time'}
         '''
-        
 
         if rate is not None:
             selected_cycs = self.select_by_rate(rate, cyctype=cyctype)

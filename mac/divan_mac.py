@@ -476,6 +476,10 @@ def plotting(Q_measured, dVdQ_measured, cycle_number, save_plot, display_plot):
     return dVdQ_calc
 
 
+@st.cache
+def convert_df(df):
+    return df.to_csv(index=False).encode('utf-8')
+
 
 # If a Neware file has been uploaded
 if fullData is not None:
@@ -1235,7 +1239,9 @@ if fullData is not None:
 
                         file.write(str(cn) + "  " + str(round(st.session_state["slip_neg"], 2)) + "  " + str(round(st.session_state["slip_pos"], 2)) +
 
-                                   "  " + str(round(st.session_state["m_neg"], 2)) + "  " + str(round(st.session_state["m_pos"], 2)) + "  " + str((pos_slip_arr[0] - neg_slip_arr[0]) - (round(st.session_state["slip_pos"], 2) - round(st.session_state["slip_neg"], 2))) + "\n")
+                                   "  " + str(round(st.session_state["m_neg"], 2)) + "  " + str(round(st.session_state["m_pos"], 2)) + "  " +
+                                   str((pos_slip_arr[0] - neg_slip_arr[0]) - (round(st.session_state["slip_pos"], 2) -
+                                                                              round(st.session_state["slip_neg"], 2))) + "\n")
 
 
 
@@ -1429,15 +1435,15 @@ if fullData is not None:
     if plot_opts == 'Cell Explorer':
         
         if posData is not None and negData is not None:
-            cell_ex_sel = st.sidebar.selectbox("What would you like to see?", ["V-Q", "dQ/dV vs. V", "dV/dQ of Interpolated Reference Data"])
+            cell_ex_sel = st.sidebar.selectbox("What would you like to plot?", ["V-Q", "dQ/dV vs. V", "Lifetime Capacity", "dV/dQ of Interpolated Reference Data"])
         else:
-            cell_ex_sel = st.sidebar.selectbox("What would you like to see?", ["V-Q", "dQ/dV vs. V"])
+            cell_ex_sel = st.sidebar.selectbox("What would you like to plot?", ["V-Q", "dQ/dV vs. V", "Lifetime Capacity"])
         
         
-        if cell_ex_sel != 'dV/dQ of Interpolated Reference Data':
+        if cell_ex_sel != 'dV/dQ of Interpolated Reference Data' and cell_ex_sel != 'Lifetime Capacity':
                 
             indiv_or_mult = st.sidebar.radio("Display one cycle or multiple at once?", ["One Cycle", "Multiple Cycles"])
-                
+
             rates = ['All'] + cycler_data.get_rates()
             rate = st.sidebar.selectbox("Which C-rate would you like to see?",
                                             tuple(rates))
@@ -1484,7 +1490,7 @@ if fullData is not None:
                 colors = avail_colors * int(num_cycs / len(avail_colors) + 1)
             else:
                 colors = bp.viridis(num_cycs)
-            
+
             if cell_ex_sel == "dQ/dV vs. V":
     
                 if 'window_size' not in st.session_state:
@@ -1571,7 +1577,92 @@ if fullData is not None:
                 #if savepng_button is True:
                 #    export_png(p, filename="{}.png".format(fig_path))
                 # =======================================#
-                
+
+        elif cell_ex_sel == "Lifetime Capacity":
+
+            rates = ['All'] + cycler_data.get_rates()
+            rate = st.sidebar.selectbox("Which C-rate would you like to use?",
+                                        tuple(rates))
+
+            ncycs = cycler_data.get_ncyc()
+            if rate == 'All':
+                cyc_nums = np.arange(1, ncycs + 1)
+            else:
+                cyc_nums = np.array(cycler_data.select_by_rate(rate))
+
+            normalize_check = st.sidebar.checkbox("Normalize using specific cycle?")
+
+            if normalize_check:
+                cycle = st.sidebar.selectbox("Normalization Cycle", options=list(cyc_nums))
+                num_cycs = 1
+                cycnums = list([cycle])
+                st.write("Using cycle {0} for normalization.".format(cycnums[0]))
+
+            else:
+                cycle = None
+
+            voltage_range_check = st.sidebar.checkbox("Use voltage range?")
+
+            potential = cycler_data.get_potential()
+
+            if voltage_range_check:
+
+                v_min_col, v_max_col = st.sidebar.columns(2)
+
+                with v_min_col:
+                    v_min = st.text_input("Minimum Voltage (V)", value=min(potential))
+
+                with v_max_col:
+                    v_max = st.text_input("Maximum Voltage (V)", value=max(potential))
+
+                vrange = [float(v_min), float(v_max)]
+
+            else:
+                vrange = None
+
+            x_variable = st.sidebar.selectbox(label="X-variable", options=["Time", "Cycle Number"])
+
+            if x_variable == "Cycle Number":
+                x_var = "cycnum"
+                x_unit = ""
+            else:
+                x_var = "time"
+                x_unit = " (s)"
+
+            if rate == "All":
+                discap_rate = None
+            else:
+                discap_rate = rate
+
+            plot_cbox = st.sidebar.checkbox("Plot!")
+
+            if plot_cbox:
+
+                x, y = cycler_data.get_discap(x_var=x_var, rate = discap_rate, cyctype = "cycle",
+                                              normcyc=cycle, vrange=vrange)
+
+
+                p = figure(plot_width=600, plot_height=400,
+                           x_axis_label= x_variable + x_unit,
+                           y_axis_label='Capacity (mAh)')
+
+                p.scatter(x, y, line_width=2.0)
+                st.bokeh_chart(p)
+
+                d = {'x': x, 'y': y}
+                df = pd.DataFrame(data=d)
+
+                csv = convert_df(df)
+
+                csv_filename = st.text_input(label="CSV Filename")
+
+                st.download_button(
+                    label="Download data as CSV",
+                    data=csv,
+                    file_name=csv_filename + ".csv",
+                    mime='text/csv',
+                )
+
         elif cell_ex_sel == 'dV/dQ of Interpolated Reference Data':
             ref_type = st.sidebar.radio("Positive or negative reference data?", ['Positive Reference', 'Negative Reference'])
             
