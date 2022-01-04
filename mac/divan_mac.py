@@ -1590,6 +1590,14 @@ if fullData is not None:
             else:
                 cyc_nums = np.array(cycler_data.select_by_rate(rate))
 
+            cyctype = st.sidebar.selectbox(label="Do you want charge rates for charge, discharge, or full cycles?",
+                                           options=("Charge", "Discharge", "Full Cycle"))
+
+            if cyctype == "Full Cycle":
+                type = "cycle"
+            else:
+                type = cyctype.lower()
+
             normalize_check = st.sidebar.checkbox("Normalize using specific cycle?")
 
             if normalize_check:
@@ -1638,7 +1646,7 @@ if fullData is not None:
 
             if plot_cbox:
 
-                x, y = cycler_data.get_discap(x_var=x_var, rate = discap_rate, cyctype = "cycle",
+                x, y = cycler_data.get_discap(x_var=x_var, rate = discap_rate, cyctype = type,
                                               normcyc=cycle, vrange=vrange)
 
 
