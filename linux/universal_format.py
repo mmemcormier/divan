@@ -244,6 +244,7 @@ class UniversalFormat():
         '''
         Return discharge capacity 
         x_var: {'cycnum', 'time'}
+        TODO: implement specific capacity. Need to add mass arg in __init__
         '''
         
 
@@ -278,6 +279,8 @@ class UniversalFormat():
             caps = caps / caps[normcyc - 1]
         
         return x, caps
+    
+    # TODO: get_chgcap()
     
     def get_vcurve(self, cycnum=-1, cyctype='cycle', active_mass=None):
 
