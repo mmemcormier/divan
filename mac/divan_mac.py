@@ -1594,9 +1594,9 @@ if fullData is not None:
                                            options=("Charge", "Discharge", "Full Cycle"))
 
             if cyctype == "Full Cycle":
-                type = "cycle"
+                cycle_type = "cycle"
             else:
-                type = cyctype.lower()
+                cycle_type = cyctype.lower()
 
             normalize_check = st.sidebar.checkbox("Normalize using specific cycle?")
 
@@ -1618,12 +1618,12 @@ if fullData is not None:
                 v_min_col, v_max_col = st.sidebar.columns(2)
 
                 with v_min_col:
-                    v_min = st.text_input("Minimum Voltage (V)", value=min(potential))
+                    v_min = st.text_input("Minimum Voltage (V)", value=np.amin(potential))
 
                 with v_max_col:
-                    v_max = st.text_input("Maximum Voltage (V)", value=max(potential))
+                    v_max = st.text_input("Maximum Voltage (V)", value=np.amax(potential))
 
-                vrange = [float(v_min), float(v_max)]
+                vrange = [v_min, v_max]
 
             else:
                 vrange = None
@@ -1646,7 +1646,7 @@ if fullData is not None:
 
             if plot_cbox:
 
-                x, y = cycler_data.get_discap(x_var=x_var, rate = discap_rate, cyctype = type,
+                x, y = cycler_data.get_discap(x_var=x_var, rate=discap_rate, cyctype=cycle_type,
                                               normcyc=cycle, vrange=vrange)
 
 

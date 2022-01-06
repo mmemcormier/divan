@@ -167,7 +167,8 @@ class UniversalFormat():
         self.dis_crates = dis_crates
         self.cap_type = cap_type
         # Get step types for each prot_step
-        ds = self.formatted_df["Step"].ne(self.formatted_df["Step"].shift())
+        #ds = self.formatted_df["Step"].ne(self.formatted_df["Step"].shift())
+        ds = self.formatted_df["Prot_step"].ne(self.formatted_df["Prot_step"].shift())
         self.step_df["Step"] = self.formatted_df.loc[ds]["Step"].values
 
 

@@ -167,7 +167,8 @@ class UniversalFormat():
         self.dis_crates = dis_crates
         self.cap_type = cap_type
         # Get step types for each prot_step
-        ds = self.formatted_df["Step"].ne(self.formatted_df["Step"].shift())
+        #ds = self.formatted_df["Step"].ne(self.formatted_df["Step"].shift())
+        ds = self.formatted_df["Prot_step"].ne(self.formatted_df["Prot_step"].shift())
         self.step_df["Step"] = self.formatted_df.loc[ds]["Step"].values
 
 
@@ -234,11 +235,13 @@ class UniversalFormat():
             dis_df = self.step_df.loc[((self.step_df["Step"] == 2) | (self.step_df["Step"] == 6)) & (self.step_df["C_rates"] == rate)]
             selected_cycs = dis_df["Cycle"].values
 
+        #print(selected_cycs)
 
         return selected_cycs
-
+    
     def get_potential(self):
-        return self.formatted_df["Potential"]
+        return self.formatted_df["Potential"].values
+    
     
     def get_discap(self, x_var='cycnum', rate=None, cyctype='cycle', 
                    normcyc=None, specific=False, vrange=None):
@@ -246,6 +249,7 @@ class UniversalFormat():
         Return discharge capacity 
         x_var: {'cycnum', 'time'}
         '''
+        
 
         if rate is not None:
             selected_cycs = self.select_by_rate(rate, cyctype=cyctype)
