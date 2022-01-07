@@ -37,12 +37,12 @@ class UniversalFormat():
             self.file_type = FILE_TYPES[0]
             parsed_data = ParseNeware(self.genericfile, all_lines=lines)
             self.formatted_df = parsed_data.get_universal_format()
-            cap_type = parsed_data.cap_type
+            self.cap_type = parsed_data.cap_type
             
         else:
 
             self.file_type = FILE_TYPES[1]
-            cap_type = "cum"
+            self.cap_type = "cum"
             
             nlines = len(lines)
             headlines = []
@@ -262,11 +262,16 @@ class UniversalFormat():
 
             cap = cyc_df['Capacity'].values
             if vrange is not None:
-                new_df = cyc_df.loc[(cyc_df['Potential'] > vrange[0]) & (cyc_df['Potential'] < vrange[1])]
+                q, v = self.get_vcurve(cycnum=selected_cycs[i], cyctype='discharge')
+                #new_df = cyc_df.loc[(cyc_df['Potential'] > vrange[0]) & (cyc_df['Potential'] < vrange[1])]
                 
-                cap = new_df['Capacity'].values
-                if len(cap) < 2:
+                inds = np.where((v > vrange[0]) & (v < vrange[1]))[0]
+                if len(inds) < 2:
                     continue
+                cap = q[inds]
+                #cap = new_df['Capacity'].values
+                #if len(cap) < 2:
+                #    continue
                 
             caps[i] = np.absolute(np.amax(cap) - np.amin(cap))
             if x_var == 'time':
@@ -280,6 +285,7 @@ class UniversalFormat():
         
         return x, caps
     
+    
     def get_vcurve(self, cycnum=-1, cyctype='cycle', active_mass=None):
 
 
@@ -292,51 +298,110 @@ class UniversalFormat():
         try:
             cycle = self.formatted_df.loc[self.formatted_df['Cycle'] == cycnum]
         except:
-
             print('Cycle {} does not exist. Input a different cycle number.'.format(cycnum))
+            
 
-        if cyctype == 'charge':
+        if cyctype in ['charge', 'chg']:
             chg = cycle.loc[(cycle['Step'] == 1) | (cycle['Step'] == 5)]
-
+            chg_steps = chg["Prot_step"].unique()
+            nchg_steps = len(chg_steps)
+            #print(nchg_steps)
+            
             if len(chg) != 0:
-                voltage = chg['Potential'].values
-                capacity = chg['Capacity'].values
+                if self.cap_type == "cross":
+                    chgstep = chg.loc[chg["Prot_step"] == chg_steps[0]]
+                    Vchg = chgstep["Potential"].values
+                    Cchg = chgstep["Capacity"].values
+                    if nchg_steps > 1:
+                        for i in range(nchg_steps - 1):
+                            chgstep = chg.loc[chg["Prot_step"] == chg_steps[i+1]]
+                            Vchg = np.concatenate((Vchg, chgstep["Potential"].values))
+                            Cchg = np.concatenate((Cchg, Cchg[-1] + chgstep["Capacity"].values))
+                            
+                #voltage = chg['Potential'].values
+                #capacity = chg['Capacity'].values
+                return Cchg, Vchg
+            
             else:
                 return None, None
 
-        elif cyctype == 'discharge':
+        elif cyctype in ['discharge', 'dis']:
             dis = cycle.loc[(cycle['Step'] == 2) | (cycle['Step'] == 6)]
-
+            dis_steps = dis["Prot_step"].unique()
+            ndis_steps = len(dis_steps)
+            #print(ndis_steps)
+            
             if len(dis) != 0:
-                voltage = dis['Potential'].values
-                capacity = dis['Capacity'].values
+                if self.cap_type == "cross":
+                    disstep = dis.loc[dis["Prot_step"] == dis_steps[0]]
+                    Vdis = disstep["Potential"].values
+                    Cdis = disstep["Capacity"].values
+                    if ndis_steps > 1:
+                        for i in range(ndis_steps - 1):
+                            disstep = dis.loc[dis["Prot_step"] == dis_steps[i+1]]
+                            Vdis = np.concatenate((Vdis, disstep["Potential"].values))
+                            Cdis = np.concatenate((Cdis, Cdis[-1] + disstep["Capacity"].values))
+                            
+                #voltage = dis['Potential'].values
+                #capacity = dis['Capacity'].values
+                return Cdis, Vdis
             else:
                 return None, None
 
-        elif cyctype == 'cycle':
+        elif cyctype in ['cycle', 'cyc']:
 
             chg = cycle.loc[(cycle['Step'] == 1) | (cycle['Step'] == 5)]
             #print(len(chg))
+            chg_steps = chg["Prot_step"].unique()
+            nchg_steps = len(chg_steps)
+            #print(nchg_steps)
 
-            if len(chg) != 0:
-                Vchg = chg['Potential'].values
-                Cchg = chg['Capacity'].values
-                dis = cycle.loc[(cycle['Step'] == 2) | (cycle['Step'] == 6)]
-
-                Vdchg = dis['Potential'].values
-                Cdchg = dis['Capacity'].values
-
-                voltage = np.concatenate((Vchg, Vdchg))
-                if self.cap_type == "cross":
-                    capacity = np.concatenate((Cchg, -Cdchg+Cchg[-1]))
-                else:
-                    capacity = np.concatenate((Cchg, Cdchg))
+            if nchg_steps > 0:
                 
+                if self.cap_type == 'cum':
+                    Vchg = chg['Potential'].values
+                    Cchg = chg['Capacity'].values
+                    dis = cycle.loc[(cycle['Step'] == 2) | (cycle['Step'] == 6)]
+    
+                    Vdis = dis['Potential'].values
+                    Cdis = dis['Capacity'].values
+    
+                    voltage = np.concatenate((Vchg, Vdis))
+                    
+                    capacity = np.concatenate((Cchg, Cdis))
+                    
+                elif self.cap_type == "cross":
+                    chgstep = chg.loc[chg["Prot_step"] == chg_steps[0]]
+                    Vchg = chgstep["Potential"].values
+                    Cchg = chgstep["Capacity"].values
+                    if nchg_steps > 1:
+                        for i in range(nchg_steps - 1):
+                            chgstep = chg.loc[chg["Prot_step"] == chg_steps[i+1]]
+                            Vchg = np.concatenate((Vchg, chgstep["Potential"].values))
+                            Cchg = np.concatenate((Cchg, Cchg[-1] + chgstep["Capacity"].values))
+                    
+                    dis = cycle.loc[(cycle['Step'] == 2) | (cycle['Step'] == 6)]
+                    dis_steps = dis["Prot_step"].unique()
+                    ndis_steps = len(dis_steps)
+                    #print(ndis_steps)
+                    disstep = dis.loc[dis["Prot_step"] == dis_steps[0]]
+                    Vdis = disstep["Potential"].values
+                    Cdis = disstep["Capacity"].values
+                    
+                    if ndis_steps > 1:
+                        for i in range(ndis_steps - 1):
+                            disstep = dis.loc[dis["Prot_step"] == dis_steps[i+1]]
+                            Vdis = np.concatenate((Vdis, disstep["Potential"].values))
+                            Cdis = np.concatenate((Cdis, Cdis[-1] + disstep["Capacity"].values))
+                            
+                    capacity = np.concatenate((Cchg, -Cdis+Cchg[-1]))
+                    voltage = np.concatenate((Vchg, Vdis))
 
             else:
+                # May want to return discharge curve even if no charge curve exists for selected cycle number.
                 return None, None
 
-        return capacity, voltage
+            return capacity, voltage
 
     def get_dQdV(self, cycnum=-1, cyctype='cycle'):
         '''
