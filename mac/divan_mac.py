@@ -32,6 +32,7 @@ import pandas as pd
 
 # File selection widget
 file_expander = st.expander("Load files here")
+
 # Expander can be opened or closed using the +/- button to hide the data selection widget
 with file_expander:
     fullData = st.file_uploader("Load Neware data file file here!")
@@ -53,13 +54,13 @@ with file_expander:
     #root.wm_attributes('-topmost', 1)
     # ============================================================================ #
 
-
     st.write("When you are finished selecting files, click the '-' button at the "
              "top right of this widget to minimize it.")
 
 # Reading in Neware data, and caching data
-@st.cache(persist=True, show_spinner=True)
+@st.cache(persist=True, show_spinner=False, allow_output_mutation=True)
 def read_data(uploaded_bytes, cell_id):
+    # Bytes are uploaded to universal format differently depending on if it is a csv or txt
     if uploaded_bytes.type == 'application/vnd.ms-excel':
         file = 'csv'
         buffer = (uploaded_bytes.getbuffer())
@@ -107,7 +108,7 @@ def voltage_curves(cycnums, cyctype="charge", active_mass=None):
     cap_list = []
     volt_list = []
     for cycnum in cycnums:
-        cap, volt = nd.get_vcurve(cycnum=cycnum, cyctype=cyctype)
+        cap, volt = cycler_data.get_vcurve(cycnum=cycnum, cyctype=cyctype)
         cap_list.append(cap)
         volt_list.append(volt)
 
@@ -118,7 +119,7 @@ def dqdv_curves(cycnums, active_mass=None, explore=False):
     V_list = []
     dqdv_list = []
     for cycnum in cycnums:
-        volt, dqdv = nd.get_dQdV(cycnum=cycnum)
+        volt, dqdv = cycler_data.get_dQdV(cycnum=cycnum)
 
         if explore is False:
             inds = np.argmax(volt)
@@ -186,12 +187,13 @@ def monoton_check(x, y):
         
         return x_new, y_new
 
-#@st.cache(persist=True, show_spinner=False)
+# Function for calculating dV/dQ vs. Q curve based on parameter values
 def dVdQ_c(pos_slip, neg_slip, pos_mass, neg_mass):
     Q_p = q_p * pos_mass + pos_slip
     Q_n = q_n * neg_mass + neg_slip
     Qarr = np.arange(max(Q_p[0], Q_n[0]), min(Q_p[-1], Q_n[-1]), 0.1)
 
+    # Monotonicity check for the data
     #Q_p, v_p = monoton_check(Q_p, v_p)
     #Q_n, v_n = monoton_check(Q_n, v_n)
 
@@ -231,12 +233,13 @@ def reference_dVdQ_c(ref_type, s_neg, s_pos):
 
     return Qarr, dVdQ
 
-#@st.cache(persist=True, show_spinner=False)
+# Function for calculating dQ/dV curve based on parameter values, outputs dQ/dV and V
 def dQdV_c(pos_slip, neg_slip, pos_mass, neg_mass):
     Q_p = q_p * pos_mass + pos_slip
     Q_n = q_n * neg_mass + neg_slip
     Qarr = np.arange(max(Q_p[0], Q_n[0]), min(Q_p[-1], Q_n[-1]), 0.1)
 
+    # Monotonicity check
     #Q_p, v_p = monoton_check(Q_p, v_p)
     #Q_n, v_pn = monoton_check(Q_n, v_n)
 
@@ -251,9 +254,6 @@ def dQdV_c(pos_slip, neg_slip, pos_mass, neg_mass):
 
     return full_cell_volt, dQdV
 
-
-
-#@st.cache(persist=True, show_spinner=False)
 def dVdQ_fitting(Qvals, pos_slip, neg_slip, pos_mass, neg_mass):
     Q_p = q_p * pos_mass + pos_slip
     Q_n = q_n * neg_mass + neg_slip
@@ -278,7 +278,7 @@ def dVdQ_fitting(Qvals, pos_slip, neg_slip, pos_mass, neg_mass):
 
     return dVdQ_calc
 
-#@st.cache(persist=True, show_spinner=False)
+# Interpolating reference data so that it can be used for the calculated curve
 def interpolate_reference(v_n, q_n, v_p, q_p):
     # q_range_n is the range of specific capacity present in the negative reference data, spaced by 0.01
     q_range_n = np.arange(round(min(q_n), 2), round(max(q_n), 2), 0.01)
@@ -301,7 +301,7 @@ def interpolate_reference(v_n, q_n, v_p, q_p):
 
     return dVdq_n, dVdq_p, q_range_p, q_range_n
 
-#@st.cache(persist=True, show_spinner=False)
+# Smoothing measured data based on the measured dVdQ curve, a window size, and the order
 def smooth_meas(dVdQ_meas, window, polyorder):
     if window < len(dVdQ_meas):
         meas_smooth = savgol_filter(dVdQ_meas, window_length=window, polyorder=polyorder, deriv=0, delta=1.0, axis=- 1,
@@ -311,9 +311,11 @@ def smooth_meas(dVdQ_meas, window, polyorder):
 
     return meas_smooth
 
+# Using brute force to calculate a dV/dQ fit based on parameter bounds, the measured curve, and the density of the matrix
 def brute_force_fit(m_p_i, m_p_min, m_p_max, m_p_int, m_n_i, m_n_min, m_n_max, m_n_int, s_p_i,
                     s_p_min, s_p_max, s_p_int, s_n_i, s_n_min, s_n_max, s_n_int, dVdQ_measured, Q_measured):
 
+    # Adds the option to lock parameters
     if lock_pm:
         m_p_vals = [m_p_i]
     else:
@@ -369,22 +371,20 @@ def brute_force_fit(m_p_i, m_p_min, m_p_max, m_p_int, m_n_i, m_n_min, m_n_max, m
 
     return best_dVdQ, m_n_fit, m_p_fit, s_n_fit, s_p_fit
 
-
+# Get all rates found in the file
 @st.cache(persist=True, show_spinner=False)
 def getRates():
-    return nd.get_rates()
+    return cycler_data.get_rates()
 
-
+# Select cycles based on the rate provided
 @st.cache(persist=True, show_spinner=False)
 def selectByRate(rate):
     if rate == 'All':
         cyc_nums = np.arange(1, ncycs + 1)
     else:
-        # There can be strange issues with the data, where dVdQ_m returns an empty list for Q_meas. In these cases,.
-        #   the cycle number is skipped.
         cyc_nums = []
-        for c in np.array(nd.select_by_rate(rate)):
-            cap_m, volt_m = nd.get_vcurve(cycnum=c)
+        for c in np.array(cycler_data.select_by_rate(rate)):
+            cap_m, volt_m = cycler_data.get_vcurve(cycnum=c)
             Q_meas, dVdQ_meas = dVdQ_m(cap_m, volt_m)
 
             if len(Q_meas) == 0:
@@ -394,7 +394,7 @@ def selectByRate(rate):
 
     return cyc_nums
 
-
+# Checks that there are cycles in the file which are slow enough to perform dVdQ analysis
 @st.cache(persist=True, show_spinner=False)
 def dVdQ_rates(cyclerRates):
     if '/' in fastest_checkup:
@@ -412,7 +412,7 @@ def dVdQ_rates(cyclerRates):
     return rates
 
 
-#@st.cache(persist=False, show_spinner=False)
+
 def least_squares_fit(Q_ls, dVdQ_ls, ps, ns, pm, nm, ps_min, ns_min, pm_min, nm_min, ps_max, ns_max, pm_max, nm_max):
     p0 = [ps, ns, pm, nm]
     eps = 1e-8
@@ -429,7 +429,7 @@ def least_squares_fit(Q_ls, dVdQ_ls, ps, ns, pm, nm, ps_min, ns_min, pm_min, nm_
     bounds = ([ps_min, ns_min, pm_min, nm_min], [ps_max, ns_max, pm_max, nm_max])
 
     popt, pcov = curve_fit(dVdQ_fitting, Q_ls, dVdQ_ls, p0=p0, bounds=bounds, max_nfev=1000,
-                           ftol=1e-5, xtol=1e-6, gtol=1e-6, method='dogbox')
+                           ftol=1e-9, xtol=1e-9, gtol=None, method='dogbox')
 
     # Setting the session state values (slider values) to the output of curve_fit
     return round(popt[0],4), round(popt[1],4), round(popt[2],4), round(popt[3],4)
@@ -470,40 +470,40 @@ def plotting(Q_measured, dVdQ_measured, cycle_number, save_plot, display_plot):
     #        export_png(p, filename=dirname + "cycle_{}_fit.png".format(cycle_number))
     # =================================================================#
 
-
     if display_plot:
         st.bokeh_chart(p, use_container_width=True)
 
     return dVdQ_calc
 
+
+@st.cache
+def convert_df(df):
+    return df.to_csv(index=False).encode('utf-8')
+
+
 # If a Neware file has been uploaded
 if fullData is not None:
 
-    #nd, uf_rates = read_data(fullData, "Cell_ID")
-    nd = read_data(fullData, "Cell_ID")
-    uf_rates = nd.get_rates()
-    ncycs = nd.get_ncyc()
-
-
+    cycler_data = read_data(fullData, "Cell_ID")
+    uf_rates = cycler_data.get_rates()
+    ncycs = cycler_data.get_ncyc()
 
     # Options for what to plot
     # Only provide option of 'dV/dQ' if reference curves have been uploaded
     if posData is not None and negData is not None:
-        plot_opts = st.sidebar.selectbox("What would you like to plot?",
-                                         ('None', 'Cell Explorer','dV/dQ'))
-        
+        plot_opts = st.sidebar.radio('Select Application', options=('None', 'Cell Explorer', 'dV/dQ'))
+
         v_n, q_n, v_p, q_p = read_ref(posData, negData)
         q_n, v_n = monoton_check(q_n, v_n)
         q_p, v_p = monoton_check(q_p, v_p)
-        
+
     else:
-        plot_opts = st.sidebar.selectbox("What would you like to plot?",
-                                         ('None', 'Cell Explorer'))
+        plot_opts = st.sidebar.radio('Select Application',options=('None', 'Cell Explorer'))
 
     # Selecting available cycle rates
     rates = []
     cyc_nums = []
-    
+
     if 'm_pos' not in st.session_state:
         st.session_state["m_pos"] = 1.0
 
@@ -521,8 +521,13 @@ if fullData is not None:
         
     if 's_pos' not in st.session_state:
         st.session_state['s_pos'] = 0.0
-        
-    
+
+    if 'max_pm' not in st.session_state:
+        st.session_state["max_pm"] = 1.185
+
+    if 'max_nm' not in st.session_state:
+        st.session_state["max_nm"] = 1.00
+
 
     # For dV/dQ, it is any cycle which has a rate of C/20 or longer
     if plot_opts == 'dV/dQ':
@@ -549,8 +554,18 @@ if fullData is not None:
             plot_view = st.radio("Vertical or Horizontal View?", ("Vertical", "Horizontal"))
             dqdv_plot_type = st.radio("Do you want dQ/dV vs. V to be a line or scatter plot?", ("Line", "Scatter"))
 
+        pm_col, nm_col = st.sidebar.columns(2)
 
-        range_or_individual = st.sidebar.radio("Fit over range of cycles or individual cycle?", ["Individual", "Range"])
+        with pm_col:
+            max_p_mass = st.text_input("Initial Positive Mass (g)", value=str(st.session_state['max_pm']))
+
+        with nm_col:
+            max_n_mass = st.text_input("Initial Negative Mass (g)", value=str(st.session_state['max_nm']))
+
+        st.session_state['max_pm'] = float(max_p_mass)
+        st.session_state['max_nm'] = float(max_n_mass)
+
+        range_or_individual = st.sidebar.selectbox("Fit over range of cycles or individual cycle?", ["Individual", "Range"])
 
         # Dropdown with selectable cycle rates (based on the 'rates' list)
         rate = st.sidebar.selectbox("Which C-rate would you like to see?",
@@ -570,7 +585,7 @@ if fullData is not None:
             # The slider only includes cycle numbers from the selected rate
             cycnum = st.sidebar.select_slider("Select cycle to analyze.", options=list(cyc_nums))
             num_cycs = 1
-            cap_m, volt_m = nd.get_vcurve(cycnum=cycnum)
+            cap_m, volt_m = cycler_data.get_vcurve(cycnum=cycnum)
             Q_meas, dVdQ_meas = dVdQ_m(cap_m, volt_m)
 
             V_meas, dQdV_meas = dQdV_m(cap_m, volt_m)
@@ -611,7 +626,7 @@ if fullData is not None:
                 st.session_state["slip_neg_min"] = -45
 
             if 'slip_neg_max' not in st.session_state:
-                st.session_state["slip_neg_max"] = 40
+                st.session_state["slip_neg_max"] = 10
 
             if 'slip_neg_spacing' not in st.session_state:
                 st.session_state["slip_neg_spacing"] = 2.0
@@ -620,7 +635,7 @@ if fullData is not None:
                 st.session_state["slip_pos_min"] = -45
 
             if 'slip_pos_max' not in st.session_state:
-                st.session_state["slip_pos_max"] = 40
+                st.session_state["slip_pos_max"] = 10
 
             if 'slip_pos_spacing' not in st.session_state:
                 st.session_state["slip_pos_spacing"] = 2.0
@@ -632,16 +647,17 @@ if fullData is not None:
                 st.session_state["mass_neg_max"] = 1.0
 
             if 'mass_neg_spacing' not in st.session_state:
-                st.session_state["mass_neg_spacing"] = 0.05
+                st.session_state["mass_neg_spacing"] = 0.01
 
             if 'mass_pos_min' not in st.session_state:
                 st.session_state["mass_pos_min"] = 0.9
 
             if 'mass_pos_max' not in st.session_state:
-                st.session_state["mass_pos_max"] = 1.2
+                st.session_state["mass_pos_max"] = 1.185
 
             if 'mass_pos_spacing' not in st.session_state:
-                st.session_state["mass_pos_spacing"] = 0.05
+                st.session_state["mass_pos_spacing"] = 0.01
+
                 
 
                 
@@ -803,7 +819,10 @@ if fullData is not None:
                                 least_squares_fit(Q_meas_fit, dVdQ_meas_fit, st.session_state["slip_pos"],
                                                   st.session_state["slip_neg"], st.session_state["m_pos"],
                                                   st.session_state["m_neg"],
-                                                  -100., -100., 0.5, 0.5, 50., 50., 2., 2.)
+                                                  st.session_state["slip_pos"] - 10, st.session_state["slip_neg"] - 10,
+                                                  st.session_state["m_pos"] - 0.05, st.session_state["m_neg"] - 0.05,
+                                                  st.session_state["slip_pos"] + 10, st.session_state["slip_neg"] + 10,
+                                                  max_p_mass, max_n_mass)
 
                             dVdQ_calc = dVdQ_fitting(Q_meas, [st.session_state["slip_pos"], st.session_state["slip_neg"],
                                                               st.session_state["m_pos"], st.session_state["m_neg"]])
@@ -866,7 +885,10 @@ if fullData is not None:
                             least_squares_fit(Q_meas_fit, dVdQ_meas_fit, st.session_state["slip_pos"],
                                               st.session_state["slip_neg"], st.session_state["m_pos"],
                                               st.session_state["m_neg"],
-                                              -100., -100., 0.5, 0.5, 50., 50., 2., 2.)
+                                              st.session_state["slip_pos"] - 10, st.session_state["slip_neg"] - 10,
+                                              st.session_state["m_pos"] - 0.05, st.session_state["m_neg"] - 0.05,
+                                              st.session_state["slip_pos"] + 10, st.session_state["slip_neg"] + 10,
+                                              max_p_mass, max_n_mass)
 
                         dVdQ_calc = dVdQ_fitting(Q_meas,
                                                  [st.session_state["slip_pos"], st.session_state["slip_neg"],
@@ -884,10 +906,10 @@ if fullData is not None:
                 slider_expander = st.sidebar.expander("Adjust active mass and slippages")
 
                 with slider_expander:
-                    st.session_state["m_pos"] = st.number_input("Positive Mass (g)", value=st.session_state["m_pos"])
-                    st.session_state["m_neg"] = st.number_input("Negative Mass (g)", value=st.session_state["m_neg"])
-                    st.session_state["slip_pos"] = st.number_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"])
-                    st.session_state["slip_neg"] = st.number_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"])
+                    st.session_state["m_pos"] = st.number_input("Positive Mass (g)", value=st.session_state["m_pos"], step=1e-4,format="%.4f")
+                    st.session_state["m_neg"] = st.number_input("Negative Mass (g)", value=st.session_state["m_neg"], step=1e-4,format="%.4f")
+                    st.session_state["slip_pos"] = st.number_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"], step=1e-4,format="%.4f")
+                    st.session_state["slip_neg"] = st.number_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"], step=1e-4,format="%.4f")
 
                 # An "if not" had to be used instead of an else because the sliders would only behave properly if they
                 #   followed the first if statement and preceded the next!
@@ -935,7 +957,7 @@ if fullData is not None:
                         cap_range_radio = st.radio("Which range would you like to adjust for the autofit?", ["First Cycle", "Last Cycle"])
 
                         if cap_range_radio == "First Cycle":
-                            cap_m, volt_m = nd.get_vcurve(cycnum=fit_num_range[0])
+                            cap_m, volt_m = cycler_data.get_vcurve(cycnum=fit_num_range[0])
                             Q_meas, dVdQ_meas = dVdQ_m(cap_m, volt_m)
                             V_meas, dQdV_meas = dQdV_m(cap_m, volt_m)
 
@@ -951,7 +973,7 @@ if fullData is not None:
                             st.session_state["fit_max"] = st.session_state["fit_cap_max_i"]
 
                         elif cap_range_radio == "Last Cycle":
-                            cap_m, volt_m = nd.get_vcurve(cycnum=fit_num_range[1])
+                            cap_m, volt_m = cycler_data.get_vcurve(cycnum=fit_num_range[1])
                             Q_meas, dVdQ_meas = dVdQ_m(cap_m, volt_m)
                             V_meas, dQdV_meas = dQdV_m(cap_m, volt_m)
 
@@ -981,11 +1003,11 @@ if fullData is not None:
                 m_pos_arr = []
                 m_neg_arr = []
 
-                cap_m_i, volt_m_i = nd.get_vcurve(cycnum=fit_num_range[0])
+                cap_m_i, volt_m_i = cycler_data.get_vcurve(cycnum=fit_num_range[0])
                 Q_meas_i, dVdQ_meas_i = dVdQ_m(cap_m_i, volt_m_i)
 
                 # Final fit cycle in the specified range
-                cap_m_f, volt_m_f = nd.get_vcurve(cycnum=fit_num_range[-1])
+                cap_m_f, volt_m_f = cycler_data.get_vcurve(cycnum=fit_num_range[-1])
                 Q_meas_f, dVdQ_meas_f = dVdQ_m(cap_m_f, volt_m_f)
 
                 range_inds = np.where((list(cyc_nums) >= fit_num_range[0]) & (list(cyc_nums) <= fit_num_range[-1]))
@@ -1044,37 +1066,6 @@ if fullData is not None:
                     file.write("Cycle Number  Negative Slippage (mAh)  Positive Slippage (mAh)  Negative Mass (g) Positive Mass (g) Shift Loss (mAh)" + "\n")
 
                     dVdQ_calc, st.session_state["m_neg"], st.session_state["m_pos"], st.session_state["slip_neg"], \
-                    st.session_state["slip_pos"] = brute_force_fit(st.session_state["m_pos"],
-                                                               st.session_state["mass_pos_min"],
-                                                               st.session_state["mass_pos_max"],
-                                                               st.session_state["mass_pos_spacing"],
-                                                               st.session_state["m_neg"],
-                                                               st.session_state["mass_neg_min"],
-                                                               st.session_state["mass_neg_max"],
-                                                               st.session_state["mass_neg_spacing"],
-                                                               st.session_state["slip_pos"],
-                                                               st.session_state["slip_pos_min"],
-                                                               st.session_state["slip_pos_max"],
-                                                               st.session_state["slip_pos_spacing"],
-                                                               st.session_state["slip_neg"],
-                                                               st.session_state["slip_neg_min"],
-                                                               st.session_state["slip_neg_max"],
-                                                               st.session_state["slip_neg_spacing"],
-                                                               dVdQ_meas_f_t, Q_meas_f_t)
-
-                    try:
-                        st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], st.session_state["m_neg"] = \
-                            least_squares_fit(Q_meas_f_t, dVdQ_meas_f_t, st.session_state["slip_pos"], st.session_state["slip_neg"],
-                                                  st.session_state["m_pos"],
-                                                  st.session_state["m_neg"], -100., -100., 0.5, 0.5, 50., 50., 2., 2.)
-
-                    except:
-                        pass
-
-                    sp_f, sn_f, mp_f, mn_f = st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], \
-                                             st.session_state["m_neg"]
-
-                    dVdQ_calc, st.session_state["m_neg"], st.session_state["m_pos"], st.session_state["slip_neg"], \
                         st.session_state["slip_pos"] = brute_force_fit(st.session_state["m_pos"],
                                                                    st.session_state["mass_pos_min"],
                                                                    st.session_state["mass_pos_max"],
@@ -1098,11 +1089,13 @@ if fullData is not None:
                         st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], st.session_state[
                             "m_neg"] = st.session_state["slip_pos"], st.session_state["slip_neg"], \
                                        st.session_state["m_pos"], st.session_state["m_neg"] = \
-                            least_squares_fit(Q_meas_i_t, dVdQ_meas_i_t, st.session_state["slip_pos"],
-                                              st.session_state["slip_neg"],
-                                          st.session_state["m_pos"],
-                                          st.session_state["m_neg"],
-                                          -100., -100., 0.5, 0.5, 50., 50., 2., 2.)
+                            least_squares_fit(Q_meas_fit, dVdQ_meas_fit, st.session_state["slip_pos"],
+                                              st.session_state["slip_neg"], st.session_state["m_pos"],
+                                              st.session_state["m_neg"],
+                                              st.session_state["slip_pos"] - 10, st.session_state["slip_neg"] - 10,
+                                              st.session_state["m_pos"] - 0.05, st.session_state["m_neg"] - 0.05,
+                                              st.session_state["slip_pos"] + 10, st.session_state["slip_neg"] + 10,
+                                              max_p_mass, max_n_mass)
 
                     except:
                         pass
@@ -1114,39 +1107,14 @@ if fullData is not None:
 
                     dVdQ_calc_i = plotting(Q_meas_i, dVdQ_meas_i, fit_num_range[0], export_plot_bool, display_plots_bool)
 
-                    min_mp = min(mp_i, mp_f) - (0.1 * abs(mp_f - mp_i))
-                    max_mp = max(mp_i, mp_f) + (0.1 * abs(mp_f - mp_i))
-                    if min_mp == max_mp:
 
-                        min_mp = min_mp - abs(0.1 * min_mp)
-                        max_mp = max_mp + abs(0.1 * max_mp)
+                    file.write(str(fit_num_range[0]) + "  " + str(round(sn_i, 4)) + "  " + str(round(sp_i, 4)) +
+                               "  " + str(round(mn_i, 4)) + "  " + str(round(mp_i,4)) + "\n")
 
-                    min_mn = min(mn_i, mn_f) - (0.1 * abs(mn_f - mn_i))
-                    max_mn = max(mn_i, mn_f) + (0.1 * abs(mn_f - mn_i))
-
-                    if min_mn == max_mn:
-                        min_mn = min_mn - abs(0.1 * min_mn)
-                        max_mn = max_mn + abs(0.1 * max_mn)
-
-                    min_sp = min(sp_i, sp_f) - (0.1 * abs(sp_f - sp_i))
-                    max_sp = max(sp_i, sp_f) + (0.1 * abs(sp_f - sp_i))
-                    if min_sp == max_sp:
-                        min_sp = min_sp - abs(0.1 * min_sp)
-                        max_sp = max_sp + abs(0.1 * max_sp)
-
-                    min_sn = min(sn_i, sn_f) - (0.1 * abs(sn_f - sn_i))
-                    max_sn = max(sn_i, sn_f) + (0.1 * abs(sn_f - sn_i))
-                    if min_sn == max_sn:
-                        min_sn = min_sn - abs(0.1 * min_sn)
-                        max_sn = max_sn + abs(0.1 * max_sn)
-
-                    file.write(str(round(fit_num_range[0],2)) + "  " + str(round(sn_i, 2)) + "  " + str(round(sp_i, 2)) +
-                               "  " + str(round(mn_i, 2)) + "  " + str(round(mp_i,2)) + "\n")
-
-                    pos_slip_arr.append(round(sp_i, 2))
-                    neg_slip_arr.append(round(sn_i, 2))
-                    m_pos_arr.append(round(mp_i, 2))
-                    m_neg_arr.append(round(mn_i, 2))
+                    pos_slip_arr.append(round(sp_i, 4))
+                    neg_slip_arr.append(round(sn_i, 4))
+                    m_pos_arr.append(round(mp_i, 4))
+                    m_neg_arr.append(round(mn_i, 4))
 
 
                     min_bounds = np.linspace(st.session_state["fit_cap_min_i"], st.session_state["fit_cap_min_f"],
@@ -1154,16 +1122,25 @@ if fullData is not None:
                     max_bounds = np.linspace(st.session_state["fit_cap_max_i"], st.session_state["fit_cap_max_f"],
                                              len(range_inds[0]))[1:]
 
+
                     range_count = 0
                     for cn in list(cyc_nums[range_inds[0][1:]]):
-                        cap_m, volt_m = nd.get_vcurve(cycnum=cn)
+
+
+                        cap_m, volt_m = cycler_data.get_vcurve(cycnum=cn)
                         Q_me, dVdQ_me = dVdQ_m(cap_m, volt_m)
 
-                        min_mp = st.session_state["m_pos"] - 0.1
-                        max_mp = st.session_state["m_pos"] + 0.1
+                        min_mp = st.session_state["m_pos"] - st.session_state["m_pos"] * 0.1
+                        max_mp = st.session_state["m_pos"] + st.session_state["m_pos"] * 0.1
 
-                        min_mn = st.session_state["m_neg"] - 0.1
-                        max_mn = st.session_state["m_neg"] + 0.1
+                        if max_mp > float(max_p_mass):
+                            max_mp = float(max_p_mass)
+
+                        min_mn = st.session_state["m_neg"] - st.session_state["m_neg"] * 0.1
+                        max_mn = st.session_state["m_neg"] + st.session_state["m_neg"] * 0.1
+
+                        if max_mn > float(max_n_mass):
+                            max_mn = float(max_n_mass)
 
                         min_sn = st.session_state["slip_neg"] - 10
                         max_sn = st.session_state["slip_neg"] + 10
@@ -1188,26 +1165,40 @@ if fullData is not None:
                             dVdQ_me = smooth_meas(dVdQ_me, int(st.session_state["window_size"]),
                                                          int(st.session_state["polyorder"]))
 
-                        if range_count == int(len(range_inds[0])/2):
+                        if range_count % 5 == 0:
                             dVdQ_calc, st.session_state["m_neg"], st.session_state["m_pos"], st.session_state[
                                 "slip_neg"], \
                             st.session_state["slip_pos"] = brute_force_fit(st.session_state["m_pos"],
                                                                            min_mp,
                                                                            max_mp,
-                                                                           0.01,
+                                                                           st.session_state["mass_pos_spacing"],
                                                                            st.session_state["m_neg"],
                                                                            min_mn,
                                                                            max_mn,
-                                                                           0.01,
+                                                                           st.session_state["mass_neg_spacing"],
                                                                            st.session_state["slip_pos"],
                                                                            min_sp,
                                                                            max_sp,
-                                                                           1,
+                                                                           st.session_state["slip_pos_spacing"],
                                                                            st.session_state["slip_neg"],
                                                                            min_sn,
                                                                            max_sn,
-                                                                           1,
+                                                                           st.session_state["slip_neg_spacing"],
                                                                            dVdQ_me_t, Q_me_t)
+
+                            try:
+                                st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], \
+                                st.session_state["m_neg"] = \
+                                    least_squares_fit(Q_me_t, dVdQ_me_t, st.session_state["slip_pos"],
+                                                      st.session_state["slip_neg"],
+                                                      st.session_state["m_pos"],
+                                                      st.session_state["m_neg"],
+                                                      min_sp, min_sn, min_mp, min_mn, max_sp, max_sn, max_mp, max_mn)
+
+                            except:
+                                pass
+
+
                         try:
                             st.session_state["slip_pos"], st.session_state["slip_neg"], st.session_state["m_pos"], st.session_state["m_neg"] = \
                                 least_squares_fit(Q_me_t, dVdQ_me_t, st.session_state["slip_pos"], st.session_state["slip_neg"],
@@ -1220,19 +1211,19 @@ if fullData is not None:
                             st.session_state["slip_pos"] = brute_force_fit(st.session_state["m_pos"],
                                                                            min_mp,
                                                                            max_mp,
-                                                                           0.01,
+                                                                           st.session_state["mass_pos_spacing"],
                                                                            st.session_state["m_neg"],
                                                                            min_mn,
                                                                            max_mn,
-                                                                           0.01,
+                                                                           st.session_state["mass_neg_spacing"],
                                                                            st.session_state["slip_pos"],
                                                                            min_sp,
                                                                            max_sp,
-                                                                           1,
+                                                                           st.session_state["slip_pos_spacing"],
                                                                            st.session_state["slip_neg"],
                                                                            min_sn,
                                                                            max_sn,
-                                                                           1,
+                                                                           st.session_state["slip_neg_spacing"],
                                                                            dVdQ_me_t, Q_me_t)
 
                         if range_count % freq_int_plots == 0:
@@ -1248,7 +1239,9 @@ if fullData is not None:
 
                         file.write(str(cn) + "  " + str(round(st.session_state["slip_neg"], 2)) + "  " + str(round(st.session_state["slip_pos"], 2)) +
 
-                                   "  " + str(round(st.session_state["m_neg"], 2)) + "  " + str(round(st.session_state["m_pos"], 2)) + "  " + str((pos_slip_arr[0] - neg_slip_arr[0]) - (round(st.session_state["slip_pos"], 2) - round(st.session_state["slip_neg"], 2))) + "\n")
+                                   "  " + str(round(st.session_state["m_neg"], 2)) + "  " + str(round(st.session_state["m_pos"], 2)) + "  " +
+                                   str((pos_slip_arr[0] - neg_slip_arr[0]) - (round(st.session_state["slip_pos"], 2) -
+                                                                              round(st.session_state["slip_neg"], 2))) + "\n")
 
 
 
@@ -1442,26 +1435,24 @@ if fullData is not None:
     if plot_opts == 'Cell Explorer':
         
         if posData is not None and negData is not None:
-            cell_ex_sel = st.sidebar.radio("What would you like to see?", ["V-Q", "dQ/dV vs. V", "dV/dQ of Interpolated Reference Data"])
+            cell_ex_sel = st.sidebar.selectbox("What would you like to plot?", ["V-Q", "dQ/dV vs. V", "Lifetime Capacity", "dV/dQ of Interpolated Reference Data"])
         else:
-            cell_ex_sel = st.sidebar.radio("What would you like to see?", ["V-Q", "dQ/dV vs. V"])
+            cell_ex_sel = st.sidebar.selectbox("What would you like to plot?", ["V-Q", "dQ/dV vs. V", "Lifetime Capacity"])
         
         
-        if cell_ex_sel != 'dV/dQ of Interpolated Reference Data':
+        if cell_ex_sel != 'dV/dQ of Interpolated Reference Data' and cell_ex_sel != 'Lifetime Capacity':
                 
             indiv_or_mult = st.sidebar.radio("Display one cycle or multiple at once?", ["One Cycle", "Multiple Cycles"])
-                
-            rates = ['All'] + nd.get_rates()
+
+            rates = ['All'] + cycler_data.get_rates()
             rate = st.sidebar.selectbox("Which C-rate would you like to see?",
                                             tuple(rates))
-        
                 
-                
-            ncycs = nd.get_ncyc()
+            ncycs = cycler_data.get_ncyc()
             if rate == 'All':
                 cyc_nums = np.arange(1, ncycs + 1)
             else:
-                cyc_nums = np.array(nd.select_by_rate(rate))
+                cyc_nums = np.array(cycler_data.select_by_rate(rate))
             
             if indiv_or_mult == "Multiple Cycles":
     
@@ -1499,7 +1490,7 @@ if fullData is not None:
                 colors = avail_colors * int(num_cycs / len(avail_colors) + 1)
             else:
                 colors = bp.viridis(num_cycs)
-            
+
             if cell_ex_sel == "dQ/dV vs. V":
     
                 if 'window_size' not in st.session_state:
@@ -1586,7 +1577,100 @@ if fullData is not None:
                 #if savepng_button is True:
                 #    export_png(p, filename="{}.png".format(fig_path))
                 # =======================================#
-                
+
+        elif cell_ex_sel == "Lifetime Capacity":
+
+            rates = ['All'] + cycler_data.get_rates()
+            rate = st.sidebar.selectbox("Which C-rate would you like to use?",
+                                        tuple(rates))
+
+            ncycs = cycler_data.get_ncyc()
+            if rate == 'All':
+                cyc_nums = np.arange(1, ncycs + 1)
+            else:
+                cyc_nums = np.array(cycler_data.select_by_rate(rate))
+
+            cyctype = st.sidebar.selectbox(label="Do you want charge rates for charge, discharge, or full cycles?",
+                                           options=("Charge", "Discharge", "Full Cycle"))
+
+            if cyctype == "Full Cycle":
+                cycle_type = "cycle"
+            else:
+                cycle_type = cyctype.lower()
+
+            normalize_check = st.sidebar.checkbox("Normalize using specific cycle?")
+
+            if normalize_check:
+                cycle = st.sidebar.selectbox("Normalization Cycle", options=list(cyc_nums))
+                num_cycs = 1
+                cycnums = list([cycle])
+                st.write("Using cycle {0} for normalization.".format(cycnums[0]))
+
+            else:
+                cycle = None
+
+            voltage_range_check = st.sidebar.checkbox("Use voltage range?")
+
+            potential = cycler_data.get_potential()
+
+            if voltage_range_check:
+
+                v_min_col, v_max_col = st.sidebar.columns(2)
+
+                with v_min_col:
+                    v_min = st.text_input("Minimum Voltage (V)", value=np.amin(potential))
+
+                with v_max_col:
+                    v_max = st.text_input("Maximum Voltage (V)", value=np.amax(potential))
+
+                vrange = [v_min, v_max]
+
+            else:
+                vrange = None
+
+            x_variable = st.sidebar.selectbox(label="X-variable", options=["Time", "Cycle Number"])
+
+            if x_variable == "Cycle Number":
+                x_var = "cycnum"
+                x_unit = ""
+            else:
+                x_var = "time"
+                x_unit = " (s)"
+
+            if rate == "All":
+                discap_rate = None
+            else:
+                discap_rate = rate
+
+            plot_cbox = st.sidebar.checkbox("Plot!")
+
+            if plot_cbox:
+
+                x, y = cycler_data.get_discap(x_var=x_var, rate=discap_rate, cyctype=cycle_type,
+                                              normcyc=cycle, vrange=vrange)
+
+
+                p = figure(plot_width=600, plot_height=400,
+                           x_axis_label= x_variable + x_unit,
+                           y_axis_label='Capacity (mAh)')
+
+                p.scatter(x, y, line_width=2.0)
+                st.bokeh_chart(p)
+
+                d = {'x': x, 'y': y}
+                df = pd.DataFrame(data=d)
+
+                csv = convert_df(df)
+
+                csv_filename = st.text_input(label="CSV Filename")
+
+                st.download_button(
+                    label="Download data as CSV",
+                    data=csv,
+                    file_name=csv_filename + ".csv",
+                    mime='text/csv',
+                )
+
         elif cell_ex_sel == 'dV/dQ of Interpolated Reference Data':
             ref_type = st.sidebar.radio("Positive or negative reference data?", ['Positive Reference', 'Negative Reference'])
             
@@ -1614,10 +1698,10 @@ if fullData is not None:
                     
             with st.sidebar.expander("Active masses and slippages"):
                     
-                st.session_state["m_pos"] = st.number_input("Positive Mass (g)", value=st.session_state["m_pos"])
-                st.session_state["m_neg"] = st.number_input("Negative Mass (g)", value=st.session_state["m_neg"])
-                st.session_state["slip_pos"] = st.number_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"])
-                st.session_state["slip_neg"] = st.number_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"])
+                st.session_state["m_pos"] = st.number_input("Positive Mass (g)", value=st.session_state["m_pos"], step=1e-4)
+                st.session_state["m_neg"] = st.number_input("Negative Mass (g)", value=st.session_state["m_neg"], step=1e-4)
+                st.session_state["slip_pos"] = st.number_input("Positive Slippage (mAh)", value=st.session_state["slip_pos"], step=1e-4)
+                st.session_state["slip_neg"] = st.number_input("Negative Slippage (mAh)", value=st.session_state["slip_neg"], step=1e-4)
 
             
             ref_Q, ref_dVdQ = reference_dVdQ_c(ref_type, st.session_state['s_neg'], st.session_state['s_pos'])
