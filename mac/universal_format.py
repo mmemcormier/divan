@@ -165,7 +165,6 @@ class UniversalFormat():
         print('Found discharge C-rates: {}'.format(dis_crates))
         self.chg_crates = chg_crates
         self.dis_crates = dis_crates
-        self.cap_type = cap_type
         # Get step types for each prot_step
         #ds = self.formatted_df["Step"].ne(self.formatted_df["Step"].shift())
         ds = self.formatted_df["Prot_step"].ne(self.formatted_df["Prot_step"].shift())
@@ -245,6 +244,7 @@ class UniversalFormat():
         '''
         Return discharge capacity 
         x_var: {'cycnum', 'time'}
+        TODO: implement specific capacity. Need to add mass arg in __init__
         '''
         
 
