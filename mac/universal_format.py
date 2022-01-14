@@ -238,6 +238,10 @@ class UniversalFormat():
 
         return selected_cycs
     
+    def get_potential(self):
+        
+        return self.formatted_df["Potential"].values
+    
     
     def get_discap(self, x_var='cycnum', rate=None, cyctype='cycle', 
                    normcyc=None, specific=False, vrange=None):

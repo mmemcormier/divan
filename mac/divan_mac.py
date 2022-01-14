@@ -26,36 +26,6 @@ from scipy.signal import savgol_filter
 import pandas as pd
 
 
-'''
-## dV/dQ Analysis
-'''
-
-# File selection widget
-file_expander = st.expander("Load files here")
-
-# Expander can be opened or closed using the +/- button to hide the data selection widget
-with file_expander:
-    fullData = st.file_uploader("Load Neware data file file here!")
-    st.markdown('''
-    #### If you wish to perform dV/dQ analysis, select positive and negative reference files:
-    ''')
-    posData = st.file_uploader("Load the positive reference file here!")
-    negData = st.file_uploader("Load the negative reference file here!")
-    reference_type = st.radio("Fitting full cell charge or discharge?", ('Discharge', 'Charge'))
-
-    # ============================================================================ #
-    # Windows only feature
-
-    # Set up tkinter
-    #root = tk.Tk()
-    #root.withdraw()
-
-    # Make folder picker dialog appear on top of other windows
-    #root.wm_attributes('-topmost', 1)
-    # ============================================================================ #
-
-    st.write("When you are finished selecting files, click the '-' button at the "
-             "top right of this widget to minimize it.")
 
 # Reading in Neware data, and caching data
 @st.cache(persist=True, show_spinner=False, allow_output_mutation=True)
@@ -114,6 +84,8 @@ def voltage_curves(cycnums, cyctype="charge", active_mass=None):
 
     return cap_list, volt_list
 
+# Any variable used within the function should be passed as an arg. 
+# Need to look through all and fix.
 @st.cache(persist=True, show_spinner=False)
 def dqdv_curves(cycnums, active_mass=None, explore=False):
     V_list = []
@@ -123,7 +95,7 @@ def dqdv_curves(cycnums, active_mass=None, explore=False):
 
         if explore is False:
             inds = np.argmax(volt)
-            if reference_type == "Discharge":
+            if st.session_state["ref_type"] == "Discharge":
                 volt = volt[:inds]
                 dqdv = dqdv[:inds]
             else:
@@ -139,7 +111,7 @@ def dqdv_curves(cycnums, active_mass=None, explore=False):
 def dVdQ_m(capacity_m, voltage_m, active_mass=None):
     # Get discharge part of cycle only.
     inds = np.argmax(capacity_m)
-    if reference_type == "Discharge":
+    if st.session_state["ref_type"] == "Discharge":
         capacity_m = capacity_m[:inds]
         voltage_m = voltage_m[:inds]
     else:
@@ -161,7 +133,7 @@ def dVdQ_m(capacity_m, voltage_m, active_mass=None):
 def dQdV_m(capacity_m, voltage_m, active_mass=None):
     # Get discharge part of cycle only.
     inds = np.argmax(capacity_m)
-    if reference_type == "Discharge":
+    if st.session_state["ref_type"] == "Discharge":
         capacity_m = capacity_m[:inds]
         voltage_m = voltage_m[:inds]
     else:
@@ -481,56 +453,116 @@ def convert_df(df):
     return df.to_csv(index=False).encode('utf-8')
 
 
+
+nav_opts = st.sidebar.radio('Navigation', options=('File Selection', 
+                                                   'Cell Explorer', 
+                                                   'dV/dQ Analysis'))
+
+
+if "file_loaded" not in st.session_state:
+    st.session_state["file_loaded"] = False
+    
+if "posData" not in st.session_state:
+    st.session_state["posData"] = None
+    
+if "negData" not in st.session_state:
+    st.session_state["negData"] = None
+
+
+if nav_opts == 'File Selection':
+
+    '''
+    ## File Selection
+    '''
+    # File selection widget
+    #file_expander = st.expander("Load files here")
+    
+    # Expander can be opened or closed using the +/- button to hide the data selection widget
+    #with file_expander:
+    fullData = st.file_uploader("Load data file here!")
+    st.session_state["data_file"] = fullData
+    if fullData is not None:
+        st.session_state["file_loaded"] = True
+    else:
+        st.session_state["file_loaded"] = False
+        
+    #st.session_state["file_loaded"]
+    st.markdown('''
+    #### If you wish to perform dV/dQ analysis, select positive and negative reference files:
+    ''')
+    #posData = st.file_uploader("Load the positive reference file here!")
+    #negData = st.file_uploader("Load the negative reference file here!")
+    st.session_state["posData"] = st.file_uploader("Load the positive reference file here!")
+    st.session_state["negData"] = st.file_uploader("Load the negative reference file here!")
+    #reference_type = st.radio("Fitting full cell charge or discharge?", ('Discharge', 'Charge'))
+    st.session_state["ref_type"] = st.radio("Fitting full cell charge or discharge?", ('Discharge', 'Charge'))    
+        #st.write("When you are finished selecting files, click the '-' button at the "
+        #         "top right of this widget to minimize it.")
+
+elif nav_opts == 'dV/dQ Analysis':
+    #st.session_state["file_loaded"]
+    
+    #if fullData is None:
+    if (st.session_state["file_loaded"] is False) or \
+       (st.session_state["posData"] is None) or \
+       (st.session_state["negData"] is None):
+        '''
+        ## Load a cycler file, positive reference, and negative reference to begin.
+        '''
+
 # If a Neware file has been uploaded
-if fullData is not None:
-
-    cycler_data = read_data(fullData, "Cell_ID")
-    uf_rates = cycler_data.get_rates()
-    ncycs = cycler_data.get_ncyc()
-
-    # Options for what to plot
-    # Only provide option of 'dV/dQ' if reference curves have been uploaded
-    if posData is not None and negData is not None:
-        plot_opts = st.sidebar.radio('Select Application', options=('None', 'Cell Explorer', 'dV/dQ'))
-
-        v_n, q_n, v_p, q_p = read_ref(posData, negData)
+    #if fullData is not None:
+    else:
+    
+        #cycler_data = read_data(fullData, "Cell_ID")
+        cycler_data = read_data(st.session_state["data_file"], "Cell_ID")
+        uf_rates = cycler_data.get_rates()
+        ncycs = cycler_data.get_ncyc()
+    
+        # Options for what to plot
+        # Only provide option of 'dV/dQ' if reference curves have been uploaded
+        #if posData is not None and negData is not None:
+            #nav_opts = st.sidebar.radio('Select Application', options=('File Selection', 'Cell Explorer', 'dV/dQ'))
+    
+        #v_n, q_n, v_p, q_p = read_ref(posData, negData)
+        v_n, q_n, v_p, q_p = read_ref(st.session_state["posData"], st.session_state["negData"])
         q_n, v_n = monoton_check(q_n, v_n)
         q_p, v_p = monoton_check(q_p, v_p)
+    
+        #else:
+            #nav_opts = st.sidebar.radio('Select Application',options=('File Selection', 'Cell Explorer'))
 
-    else:
-        plot_opts = st.sidebar.radio('Select Application',options=('None', 'Cell Explorer'))
-
-    # Selecting available cycle rates
-    rates = []
-    cyc_nums = []
-
-    if 'm_pos' not in st.session_state:
-        st.session_state["m_pos"] = 1.0
-
-    if 'm_neg' not in st.session_state:
-        st.session_state["m_neg"] = 1.0
-
-    if 'slip_pos' not in st.session_state:
-        st.session_state["slip_pos"] = 0.0
-
-    if 'slip_neg' not in st.session_state:
-        st.session_state["slip_neg"] = 0.0
-
-    if 's_neg' not in st.session_state:
-        st.session_state['s_neg'] = 0.00001
-        
-    if 's_pos' not in st.session_state:
-        st.session_state['s_pos'] = 0.0
-
-    if 'max_pm' not in st.session_state:
-        st.session_state["max_pm"] = 1.185
-
-    if 'max_nm' not in st.session_state:
-        st.session_state["max_nm"] = 1.00
+        # Selecting available cycle rates
+        rates = []
+        cyc_nums = []
+    
+        if 'm_pos' not in st.session_state:
+            st.session_state["m_pos"] = 1.0
+    
+        if 'm_neg' not in st.session_state:
+            st.session_state["m_neg"] = 1.0
+    
+        if 'slip_pos' not in st.session_state:
+            st.session_state["slip_pos"] = 0.0
+    
+        if 'slip_neg' not in st.session_state:
+            st.session_state["slip_neg"] = 0.0
+    
+        if 's_neg' not in st.session_state:
+            st.session_state['s_neg'] = 0.00001
+            
+        if 's_pos' not in st.session_state:
+            st.session_state['s_pos'] = 0.0
+    
+        if 'max_pm' not in st.session_state:
+            st.session_state["max_pm"] = 1.185
+    
+        if 'max_nm' not in st.session_state:
+            st.session_state["max_nm"] = 1.00
 
 
     # For dV/dQ, it is any cycle which has a rate of C/20 or longer
-    if plot_opts == 'dV/dQ':
+    #if nav_opts == 'dV/dQ':
         
         fastest_checkup = st.sidebar.text_input("Fastest Checkup Cycle (Default is C/20)", value="C/20").upper()
         
@@ -658,9 +690,6 @@ if fullData is not None:
             if 'mass_pos_spacing' not in st.session_state:
                 st.session_state["mass_pos_spacing"] = 0.01
 
-                
-
-                
 
             # ========================================================================== #
             # Windows only feature #
@@ -1432,9 +1461,21 @@ if fullData is not None:
             if plot_dqdv:
                 st.bokeh_chart(dqdv_plot, use_container_width=True)
 
-    if plot_opts == 'Cell Explorer':
+if nav_opts == 'Cell Explorer':
+    
+    if st.session_state["file_loaded"] is False:
+        '''
+        # Load a file to begin.
+        '''
         
-        if posData is not None and negData is not None:
+    else:
+        
+        cycler_data = read_data(st.session_state["data_file"], "Cell_ID")
+        uf_rates = cycler_data.get_rates()
+        ncycs = cycler_data.get_ncyc()
+        
+        #if posData is not None and negData is not None:
+        if st.session_state["posData"] is not None and st.session_state["negData"] is not None:
             cell_ex_sel = st.sidebar.selectbox("What would you like to plot?", ["V-Q", "dQ/dV vs. V", "Lifetime Capacity", "dV/dQ of Interpolated Reference Data"])
         else:
             cell_ex_sel = st.sidebar.selectbox("What would you like to plot?", ["V-Q", "dQ/dV vs. V", "Lifetime Capacity"])
@@ -1590,7 +1631,7 @@ if fullData is not None:
             else:
                 cyc_nums = np.array(cycler_data.select_by_rate(rate))
 
-            cyctype = st.sidebar.selectbox(label="Do you want charge rates for charge, discharge, or full cycles?",
+            cyctype = st.sidebar.selectbox(label="Select cycles with which only charge, only discharge, \n or full cycle have the corresponding rate?",
                                            options=("Charge", "Discharge", "Full Cycle"))
 
             if cyctype == "Full Cycle":
@@ -1618,10 +1659,10 @@ if fullData is not None:
                 v_min_col, v_max_col = st.sidebar.columns(2)
 
                 with v_min_col:
-                    v_min = st.text_input("Minimum Voltage (V)", value=np.amin(potential))
+                    v_min = float(st.text_input("Minimum Voltage (V)", value=np.amin(potential)))
 
                 with v_max_col:
-                    v_max = st.text_input("Maximum Voltage (V)", value=np.amax(potential))
+                    v_max = float(st.text_input("Maximum Voltage (V)", value=np.amax(potential)))
 
                 vrange = [v_min, v_max]
 
