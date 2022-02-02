@@ -201,7 +201,8 @@ class UniversalFormat():
                 if r not in rates:
                     rates.append(r)
             return rates
-        
+
+
     def select_by_rate(self, rate, cyctype='cycle'):
         '''
         Return record data for all cycles that have a particular rate.
@@ -237,10 +238,17 @@ class UniversalFormat():
         #print(selected_cycs)
 
         return selected_cycs
+
     
     def get_potential(self):
         
         return self.formatted_df["Potential"].values
+
+    def get_cyc_time(self, cycnum):
+
+        cyc_times = np.array(self.formatted_df.loc[(self.formatted_df["Cycle"] == cycnum)]["Time"])
+
+        return cyc_times[0]
     
     
     def get_discap(self, x_var='cycnum', rate=None, cyctype='cycle', 
@@ -434,3 +442,35 @@ class UniversalFormat():
 
 
         return voltage, dQdV
+
+    def find_checkup_cycles(self):
+        cycnums = np.unique(self.get_cycnums())
+
+        voltages = np.zeros(len(cycnums))
+
+        for i in range(len(cycnums)):
+            cycnum = cycnums[i]
+
+            '''This is the statement provided by Marc, for some reason this identified non 100% DoD cycles,
+            using get_vcurve for now'''
+            voltage_dis = self.formatted_df.loc[(self.formatted_df["Cycle"] == cycnum) &
+                                            (self.formatted_df["Step"] == 2)]["Potential"]
+
+            voltage_chg = self.formatted_df.loc[(self.formatted_df["Cycle"] == cycnum) &
+                                                (self.formatted_df["Step"].isin([1,5,7]))]["Potential"]
+
+
+            if len(voltage_dis) > 0 and len(voltage_chg) > 0:
+
+                volt_depth_chg = abs(np.max(voltage_chg)) - np.min(voltage_chg)
+                volt_depth_dis = abs(np.max(voltage_dis)) - np.min(voltage_dis)
+
+                voltages[i] = volt_depth_dis+volt_depth_chg
+
+        voltages = np.array(voltages)
+
+        max_v = np.max(np.round(voltages, 1))
+
+        checkup_cycles = np.where((np.round(voltages, 1) - max_v) >= 0)
+
+        return cycnums[checkup_cycles]
