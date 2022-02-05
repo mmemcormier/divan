@@ -51,13 +51,15 @@ class UniversalFormat():
                 l = lines[i].strip().split()
                 if l[0][:6] == '[Data]':
                     hline = lines[i+1]
+                    print(hline)
                     nskip = i+1
                     break
             
             header = ''.join(headlines)
             
             # find mass and theoretical cap using re on header str
-            m = re.search('Mass\s+\(.*\):\s+(\d+)?\.\d+', header)
+            m = re.search('Mass\s+\(.*\):\s+(\d+\.)?\d+', header)
+            #m = re.search('Mass\s+\(.*\):\s+(\d+)?\.\d+', header)
             m = m.group(0).split()
             mass_units = m[1][1:-2]
             if mass_units == 'mg':
@@ -66,22 +68,28 @@ class UniversalFormat():
                 self.mass = float(m[-1])
             
             if self.ref_cap is None:
-                m = re.search('Capacity\s+(.*):\s+(\d+)?\.\d+', header)
+                m = re.search('Capacity\s+(.*):\s+(\d+\.)?\d+' , header)
+                #m = re.search('Capacity\s+(.*):\s+(\d+)?\.\d+', header)
                 m = m.group(0).split()
                 cap_units = m[1][1:-2]
                 if cap_units == 'mAHr':
-                    self.ref_cap = float(m[-1]) / 1000
-                else:
                     self.ref_cap = float(m[-1])
+                else:
+                    self.ref_cap = float(m[-1])*1000
                 
             m = re.search('Cell: .+?(?=,|\\n)', header)
             m = m.group(0).split()
             self.cellname = m[-1]
             
             cols = hline.strip().split(",")
+            if "Flag" in cols:
+                cols.remove("Flag")
+                
             self.formatted_df = pd.DataFrame([r.split(",") for r in lines[nskip+1:]],
                                              columns=cols)
-            self.formatted_df.pop("Date and Time")
+            
+            if "Date and Time" in self.formatted_df.columns:
+                self.formatted_df.pop("Date and Time")
             
             
             self.formatted_df.rename(columns={'Capacity (Ah)': 'Capacity',
@@ -98,7 +106,15 @@ class UniversalFormat():
             # Add Prot_step column even if step num exists.
             s = self.formatted_df.Step
             self.formatted_df["Prot_step"] = s.ne(s.shift()).cumsum() - 1
-            self.formatted_df = self.formatted_df.apply(pd.to_numeric) 
+            self.formatted_df = self.formatted_df.apply(pd.to_numeric)
+            
+            # If first step is a discharge, shift capacity so there are no
+            # negative values and convert to mAh
+            self.formatted_df["Capacity"] = 1000*(self.formatted_df["Capacity"] -\
+                                            self.formatted_df["Capacity"].min())
+                
+            # Convert Current to mA
+            self.formatted_df["Current"] = self.formatted_df["Current"]*1000
             
             
         t = self.formatted_df["Time"].values
