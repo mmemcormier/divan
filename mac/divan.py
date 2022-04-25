@@ -615,9 +615,6 @@ elif nav_opts == 'dV/dQ Analysis':
         q_n, v_n = monoton_check(q_n, v_n)
         q_p, v_p = monoton_check(q_p, v_p)
 
-        # else:
-        # nav_opts = st.sidebar.radio('Select Application',options=('File Selection', 'Cell Explorer'))
-
         # Selecting available cycle rates
         rates = []
         cyc_nums = []
@@ -679,8 +676,14 @@ elif nav_opts == 'dV/dQ Analysis':
             cycnum = cyc_nums[0]
 
         else:
-            cycnum = st.sidebar.select_slider("Select cycle to analyze.", options=list(cyc_nums))
-            num_cycs = 1
+
+            try:
+                cycnum = st.sidebar.select_slider("Select cycle to analyze.", options=list(cyc_nums))
+                num_cycs = 1
+            except:
+                st.error(
+                    "This file has no c-rates of " + fastest_checkup + " or slower (which is required for dV/dQ Analysis)")
+                st.stop()
 
         cap_m, volt_m = cycler_data.get_vcurve(cycnum=cycnum)
         Q_meas, dVdQ_meas = dVdQ_m(cap_m, volt_m)
@@ -1502,6 +1505,8 @@ elif nav_opts == 'dV/dQ Analysis':
                 dvdq_bokeh_chart = st.bokeh_chart(dvdq_plot, use_container_width=True)
 
 
+
+
             d_calc = {'x_meas': Q, 'y_meas': dVdQ_calc}
             d_meas = {'x_calc': Q_meas, 'y_calc': dVdQ_meas}
 
@@ -1511,25 +1516,27 @@ elif nav_opts == 'dV/dQ Analysis':
             csv_meas = convert_df(df_meas)
             csv_calc = convert_df(df_calc)
 
-            csv_calc_filename = st.text_input(label="Calculated Data CSV Filename (do not include the '.txt' suffix)")
+            saving_expander = st.expander("Save calclated and measured curves as .txt files",expanded=False)
 
-            st.download_button(
-                label="Download Calculated dV/dQ data as TXT",
-                data=(("mp:{},mn:{},ps:{},ns:{}\n".format((round(st.session_state["slip_pos"], 4)),
-                                                         (round(st.session_state["slip_neg"], 4)),round(st.session_state["m_pos"], 4),
-                                                         round(st.session_state["m_neg"], 4))).encode("utf-8")) + csv_calc,
-                file_name=csv_calc_filename + ".txt",
-                mime='text',
-            )
+            with saving_expander:
+                csv_calc_filename = st.text_input(label="Calculated Data CSV Filename (do not include the '.txt' suffix)")
+                st.download_button(
+                    label="Download Calculated dV/dQ data as TXT",
+                    data=(("mp:{},mn:{},ps:{},ns:{}\n".format((round(st.session_state["slip_pos"], 4)),
+                                                             (round(st.session_state["slip_neg"], 4)),round(st.session_state["m_pos"], 4),
+                                                             round(st.session_state["m_neg"], 4))).encode("utf-8")) + csv_calc,
+                    file_name=csv_calc_filename + ".txt",
+                    mime='text',
+                )
 
-            csv_meas_filename = st.text_input(label="Measured Data CSV Filename (do not include the '.txt' suffix)")
+                csv_meas_filename = st.text_input(label="Measured Data CSV Filename (do not include the '.txt' suffix)")
 
-            st.download_button(
-                label="Download Measured dV/dQ data as TXT",
-                data=csv_meas,
-                file_name=csv_meas_filename + ".txt",
-                mime='text'
-            )
+                st.download_button(
+                    label="Download Measured dV/dQ data as TXT",
+                    data=csv_meas,
+                    file_name=csv_meas_filename + ".txt",
+                    mime='text'
+                )
 
 
         elif range_or_individual == "Range" and not multi_fit_button:
