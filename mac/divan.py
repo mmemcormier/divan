@@ -421,7 +421,7 @@ def least_squares_fit(Q_ls, dVdQ_ls, ps, ns, pm, nm, ps_min, ns_min, pm_min, nm_
 
     bounds = ([ps_min, ns_min, pm_min, nm_min], [ps_max, ns_max, pm_max, nm_max])
 
-    popt, pcov = curve_fit(dVdQ_fitting, Q_ls, dVdQ_ls, p0=p0, bounds=bounds, max_nfev=1000,
+    popt, pcov = curve_fit(dVdQ_fitting, Q_ls, dVdQ_ls, p0=p0, bounds=bounds, max_nfev=5000,
                            ftol=1e-15, xtol=1e-15, gtol=1e-14, method='dogbox')
 
     # Setting the session state values (slider values) to the output of curve_fit
@@ -927,6 +927,7 @@ elif nav_opts == 'dV/dQ Analysis':
                                               st.session_state["m_neg"])
 
                     except:
+                        print("Least squares routine could not find better parameters.")
                         fit_button = False
 
             elif brute_fit_button:
