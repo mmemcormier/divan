@@ -176,6 +176,10 @@ class ParseNeware():
         if self.recunits['Voltage'] == 'mV':
             self.rec['Voltage'] = self.rec['Voltage'] / 1000
             self.recunits['Voltage'] = 'V'
+        if self.recunits['Energy'] == 'Wh':
+            self.rec['Energy'] = self.rec['Energy']*1000
+            self.recunits['Energy'] = 'mWh'
+
         ## =============================================== ##
 
         # Need codes checked - I think NVX has CCCV as 7 (CC-chg), 9 (CV-chg) and 8 (CC-dis), 10 (CV-dis)
