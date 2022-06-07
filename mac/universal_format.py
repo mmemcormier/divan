@@ -143,9 +143,13 @@ class UniversalFormat():
 
         cycnums = np.arange(1, 1 + self.get_ncyc())
 
+        self.step_df = pd.DataFrame()
+        # TODO: add "step_capacity" field to step_df.
+        # TODO: check CV step numbers for Dal UHPC and Nvx.
         stepnums = self.formatted_df["Prot_step"].unique()
         cycnums = np.zeros(len(stepnums), dtype='int')
         nstep = len(stepnums)
+        step_caps = np.zeros(nstep)
         step_rates = ['N/A'] * nstep
         chg_rates = []
         chg_crates = []
@@ -155,6 +159,7 @@ class UniversalFormat():
             step = self.formatted_df.loc[self.formatted_df["Prot_step"] == stepnums[i]]
             cycnum = step["Cycle"].unique()
             cycnums[i] = cycnum[0]
+            step_caps[i] = np.absolute(step["Capacity"].values[0] - step["Capacity"].values[-1])
 
             if step["Step"].unique()[0] in [1, 5]:
                 chg_cur = step["Current"].values
@@ -180,9 +185,10 @@ class UniversalFormat():
                         dis_crates.append(C_RATES[ind])
                     step_rates[i] = C_RATES[ind]
 
-        self.step_df = pd.DataFrame()
+
         self.step_df["Cycle"] = cycnums
         self.step_df["Prot_step"] = stepnums
+        self.step_df["Step_cap"] = step_caps
         self.step_df["C_rates"] = step_rates
         print('Found charge C-rates: {}'.format(chg_crates))
         print('Found discharge C-rates: {}'.format(dis_crates))
@@ -202,7 +208,7 @@ class UniversalFormat():
 
     def get_cycnums(self):
 
-        return self.formatted_df['Cycle'].values
+        return self.formatted_df['Cycle'].unique()
 
     def get_rates(self, cyctype='cycle'):
         '''
@@ -271,7 +277,7 @@ class UniversalFormat():
 
         return cyc_times[0]
 
-    def get_discap(self, x_var='cycnum', rate=None, cyctype='cycle',
+    def get_discap(self, x_var='cycnum', cycnums=None, rate=None, cyctype='cycle',
                    normcyc=None, specific=False, vrange=None):
         '''
         Return discharge capacity
@@ -279,8 +285,12 @@ class UniversalFormat():
         TODO: implement specific capacity. Need to add mass arg in __init__
         '''
 
-        if rate is not None:
+        if cycnums is not None:
+            selected_cycs = cycnums
+            
+        elif rate is not None:
             selected_cycs = self.select_by_rate(rate, cyctype=cyctype)
+            
         else:
             selected_cycs = self.get_cycnums()
         ncycs = len(selected_cycs)
@@ -456,6 +466,41 @@ class UniversalFormat():
         dQdV = np.concatenate((dQdVchg, dQdVdchg))
 
         return voltage, dQdV
+    
+    def deltaV(self, cycnums=None, normcyc=None):
+        
+        if cycnums is None:
+            cycnums = self.get_cycnums()
+            
+        if cycnums[0] == 0:
+                cycnums = cycnums[1:]  # Start at cycle 1. Cycle 0 is only a half cycle.
+        ncyc = len(cycnums)
+        
+
+        if "Energy" in self.formatted_df.columns:
+            #dV = np.zeros(ncyc)
+            good_cycs = []
+            dV = []
+            for i in range(ncyc):
+                cycdf = self.formatted_df.loc[self.formatted_df["Cycle"] == cycnums[i]]
+                Echg = cycdf.loc[(cycdf["Step"] == 1) | (cycdf["Step"] == 5)]["Energy"].values
+                Edis = cycdf.loc[(cycdf["Step"] == 2) | (cycdf["Step"] == 6)]["Energy"].values
+                Q_chg = self.step_df.loc[(self.step_df["Cycle"] == cycnums[i])
+                                           & ((self.step_df["Step"] == 1) | (self.step_df["Step"] == 5))]["Step_cap"].values[0]
+                Q_dis = self.step_df.loc[(self.step_df["Cycle"] == cycnums[i])
+                                           & ((self.step_df["Step"] == 2) | (self.step_df["Step"] == 6))]["Step_cap"].values[0]
+                if (Q_dis > 0.0) & (Q_chg > 0.0):
+                    avgVchg = np.absolute(Echg[-1] - Echg[0]) / Q_chg
+                    avgVdis = np.absolute(Edis[-1] - Edis[0]) / Q_dis
+                    dV.append(avgVchg - avgVdis)
+                    good_cycs.append(cycnums[i])
+                
+            return good_cycs, dV
+            
+        else:
+            pass
+    
+        
 
     def find_checkup_cycles(self):
         cycnums = np.unique(self.get_cycnums())

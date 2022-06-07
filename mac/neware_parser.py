@@ -176,6 +176,10 @@ class ParseNeware():
         if self.recunits['Voltage'] == 'mV':
             self.rec['Voltage'] = self.rec['Voltage'] / 1000
             self.recunits['Voltage'] = 'V'
+        if self.recunits['Energy'] == 'Wh':
+            self.rec['Energy'] = self.rec['Energy']*1000
+            self.recunits['Energy'] = 'mWh'
+
         ## =============================================== ##
 
         # Need codes checked - I think NVX has CCCV as 7 (CC-chg), 9 (CV-chg) and 8 (CC-dis), 10 (CV-dis)
@@ -187,18 +191,19 @@ class ParseNeware():
             "cccv_dchg" : 6
         }
         
-        univ_cols = ["Time", "Cycle", "Step", "Current", "Potential", "Capacity", "Prot_step"]
-        universal_df = pd.DataFrame(columns=univ_cols)
+        univ_cols = ["Time", "Cycle", "Step", "Current", "Potential",
+                     "Capacity", "Energy", "Prot_step"]
+        self.universal_df = pd.DataFrame(columns=univ_cols)
         
         #t = pd.to_datetime(self.rec["Realtime"], format='%Y-%m-%d %H:%M:%S')
         t = pd.to_datetime(self.rec["Realtime"])
         delta = t - t[0]
-        universal_df["Time"] = delta.dt.total_seconds() / 3600 # Hours
+        self.universal_df["Time"] = delta.dt.total_seconds() / 3600 # Hours
         
         univ_prot_step = self.rec["Step_ID"].values
         if univ_prot_step[0] > 0:
             univ_prot_step = univ_prot_step - univ_prot_step[0]
-        universal_df["Prot_step"] = univ_prot_step
+        self.universal_df["Prot_step"] = univ_prot_step
         
         mapped_steps = self.step["Step_Type"].str.lower().map(step_type)
         #print(mapped_steps.unique())
@@ -206,19 +211,20 @@ class ParseNeware():
         if prosteps[0] > 0:
             prosteps = prosteps - prosteps[0]
         tmp_df = pd.DataFrame(data={"Step": mapped_steps, "Prot_step": prosteps})
-        universal_df["Step"] = universal_df["Prot_step"].map(tmp_df.set_index("Prot_step")["Step"])
+        self.universal_df["Step"] = self.universal_df["Prot_step"].map(tmp_df.set_index("Prot_step")["Step"])
         
         # If first cycle does not contain a charge, set to cycle 0. Otherwise cycle 1.
-        universal_df["Cycle"] = self.rec["Cycle_ID"]
-        first_cyc = universal_df.loc[universal_df["Cycle"] == 1]
+        self.universal_df["Cycle"] = self.rec["Cycle_ID"]
+        first_cyc = self.universal_df.loc[self.universal_df["Cycle"] == 1]
         steps = first_cyc["Step"].unique()
         if (1 not in steps) and (5 not in steps):
-            if universal_df["Cycle"][0] > 0:
-                universal_df["Cycle"] = universal_df["Cycle"] - 1
+            if self.universal_df["Cycle"][0] > 0:
+                self.universal_df["Cycle"] = self.universal_df["Cycle"] - 1
         
-        universal_df["Current"] = self.rec["Current"]
-        universal_df["Potential"] = self.rec["Voltage"]
-        universal_df["Capacity"] = self.rec["Capacity"]
+        self.universal_df["Current"] = self.rec["Current"]
+        self.universal_df["Potential"] = self.rec["Voltage"]
+        self.universal_df["Capacity"] = self.rec["Capacity"]
+        self.universal_df["Energy"] = self.rec["Energy"]
         self.cap_type = "cross"
         
         '''
@@ -268,7 +274,7 @@ class ParseNeware():
 
         universal_df["Capacity"] = cap
         '''
-        self.universal_df = universal_df
+        #self.universal_df = universal_df
         
 
         ## =============================================== ##
