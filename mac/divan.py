@@ -4,6 +4,7 @@ Created on Monday, May 10, 2021
 @author: John Corsten
 """
 
+import paramiko
 import streamlit as st
 
 import numpy as np
@@ -25,6 +26,8 @@ from scipy.signal import savgol_filter
 # import io
 import pandas as pd
 
+# Code to one day support blended cells
+# blended_ops = ["none","pos","neg","both"]
 
 # Reading in Neware data, and caching data
 @st.cache(persist=False, show_spinner=False, allow_output_mutation=True)
@@ -40,6 +43,50 @@ def read_data(uploaded_bytes, cell_id):
 
     uf = UniversalFormat(file, all_lines=data)
     return uf
+
+@st.cache(persist=False, show_spinner=False, allow_output_mutation=True)
+def pull_file(path):
+    host = "129.173.120.129"
+    port = 27437
+    username = "sbuteau"
+    password = "sbuteau2018"
+
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(host, port, username, password)
+    sftp_client = ssh.open_sftp()
+
+    db_file = sftp_client.open(path, "r")
+    uf = UniversalFormat("downloaded",all_lines=db_file)
+    ssh.close()
+
+    return uf
+
+
+@st.cache(persist=False, show_spinner=False, allow_output_mutation=True)
+def get_remote_files(barcode_input):
+    host = "129.173.120.129"
+    port = 27437
+    username = "sbuteau"
+    password = "sbuteau2018"
+
+    command = 'find ../../../DB/srv/samba/share/DATA/CYCLING/NEWARE/ maxdepth=1 -name "*{}*" -print'.format(barcode_input)
+
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(host, port, username, password)
+
+    stdin, stdout, stderr = ssh.exec_command(command)
+    lines = stdout.readlines()
+
+    # file_opts = []
+    # for line in lines:
+    #     if line[-4:-1] == "txt" or line[-4:] == "csv":
+    #         file_opts.append(line)
+
+    ssh.close()
+    return lines
+
 
 
 # Reading uploaded reference files, and caching data
@@ -546,16 +593,72 @@ if nav_opts == 'File Selection':
     '''
     ## File Selection
     '''
-    # File selection widget
-    # file_expander = st.expander("Load files here")
 
-    # Expander can be opened or closed using the +/- button to hide the data selection widget
-    # with file_expander:
+    if 'logged_in' not in st.session_state:
+        st.session_state['logged_in'] = False
+
+
+    uname = st.text_input("SSH User Name")
+    pword = st.text_input("SSH Password")
+
+    login_btn = st.button("Log in to database!")
+
+    if login_btn:
+        try:
+            host = "129.173.120.129"
+            port = 27437
+            username = uname
+            password = pword
+
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(host, port, username, password)
+
+            st.session_state["logged_in"] = True
+        except:
+            st.session_state["logged_in"] = False
+
     fullData = st.file_uploader("Load data file here!")
 
+
+    if st.session_state["logged_in"] is True:
+
+
+        barcode_input = st.text_input("Search Term (ie: barcode)")
+
+        search_results = get_remote_files(barcode_input)
+
+        parsed_results = []
+        for r in search_results:
+            parsed_results.append(r[r.rfind("/CYCLING/")+1:-1])
+
+        db_selection = st.selectbox("Search Results",parsed_results)
+
+        confirm_db_res = st.checkbox("Confirm Database Selection",value=False)
+
+        if "db_file" not in st.session_state:
+            st.session_state["db_file"] = False
+        if "db_filename" not in st.session_state:
+            st.session_state["db_filename"] = None
+
+        if len(parsed_results) != 0 and confirm_db_res:
+            st.session_state["db_filename"]= "../../../DB/srv/samba/share/DATA/" + db_selection
+            st.session_state["db_file"] = True
+            st.session_state["file_loaded"] = True
+            fullData = "Database"
+
+
     if fullData is not None:
-        st.session_state["data_file"] = read_data(fullData, "Cell_ID")
+        if st.session_state["db_file"]:
+            st.session_state["uploaded_fileName"] = st.session_state["db_filename"]
+            st.session_state["data_file"] = pull_file(st.session_state["db_filename"])
+        else:
+            st.session_state["uploaded_fileName"] = fullData.name
+            st.session_state["data_file"] = read_data(fullData, "Cell_ID")
+
+
         st.session_state["file_loaded"] = True
+
     else:
         st.session_state["file_loaded"] = False
 
@@ -565,23 +668,41 @@ if nav_opts == 'File Selection':
     ''')
     pos_Data = st.file_uploader("Load the positive reference file here!")
     neg_Data = st.file_uploader("Load the negative reference file here!")
-    # st.session_state["posData"] = st.file_uploader("Load the positive reference file here!")
-    # st.session_state["negData"] = st.file_uploader("Load the negative reference file here!")
-    # reference_type = st.radio("Fitting full cell charge or discharge?", ('Discharge', 'Charge'))
-    st.session_state["ref_type"] = st.radio("Fitting full cell charge or discharge?", ('Discharge', 'Charge'))
-    # st.write("When you are finished selecting files, click the '-' button at the "
-    #         "top right of this widget to minimize it.")
 
-    if (pos_Data is not None) and (neg_Data is not None):
-        st.session_state["posData"] = True
-        st.session_state["negData"] = True
-        st.session_state["v_n"], st.session_state["q_n"], st.session_state["v_p"], st.session_state["q_p"] = read_ref(
-            pos_Data, neg_Data)
-        st.write(pos_Data)
+    # some code to one day support adding more data for blended cells
+
+    # blended_expander = st.expander("Add second reference files for blended fitting")
+    #
+    # with blended_expander:
+    #     pos_Data2 = st.file_uploader("Load second positive reference file here! (for blended cells)")
+    #     neg_Data2 = st.file_uploader("Load second negative reference file here! (for blended cells)")
+    #
+    # st.session_state["ref_type"] = st.radio("Fitting full cell charge or discharge?", ('Discharge', 'Charge'))
+    #
+    # if (pos_Data is not None) and (neg_Data is not None):
+    #     st.session_state["posData"] = True
+    #     st.session_state["negData"] = True
+    #     st.session_state["v_n"], st.session_state["q_n"], st.session_state["v_p"], st.session_state["q_p"] = read_ref(
+    #         pos_Data, neg_Data)
+    #     st.write(pos_Data)
+    #
+    # st.session_state["blended_status"] = blended_ops[0]
+    #
+    # if (pos_Data2 is not None) and (neg_Data2 is None):
+    #     st.session_state["blended_status"] = blended_ops[1]
+    #
+    # elif (pos_Data2 is None) and (neg_Data2 is not None):
+    #     st.session_state["blended_status"] = blended_ops[2]
+    #
+    # elif (pos_Data2 is not None) and (neg_Data2 is not None):
+    #     st.session_state["blended_status"] = blended_ops[3]
 
 
 elif nav_opts == 'dV/dQ Analysis':
     # st.session_state["file_loaded"]
+
+    st.write("Uploaded cycler file name: {}".format(st.session_state["uploaded_fileName"]))
+
 
     # if fullData is None:
     if (st.session_state["file_loaded"] is False) or \
@@ -1577,6 +1698,24 @@ elif nav_opts == 'dV/dQ Analysis':
             if plot_dqdv:
                 st.bokeh_chart(dqdv_plot, use_container_width=True)
 
+# Code to one day support blended cells
+
+# if nav_opts == "Blended Cell dV/dQ Analysis":
+#
+#     # if fullData is None:
+#     if (st.session_state["file_loaded"] is False) or \
+#             (st.session_state["posData"] is None) or \
+#             (st.session_state["negData"] is None):
+#
+#         st.error("Load a cycler file, positive reference, and negative reference to begin.")
+#         st.stop()
+#
+#     elif st.session_state["blended_status"] == blended_ops[0]:
+#         st.error("You must upload additional reference curves for blended analysis")
+#         st.stop()
+
+
+
 if nav_opts == 'Cell Explorer':
 
     if st.session_state["file_loaded"] is False:
@@ -1935,6 +2074,8 @@ if nav_opts == 'Cell Explorer':
             if plot_type == 'Scatter':
                 ref_dVdQ_curve = ref_fig.circle(ref_Q, ref_dVdQ)
             st.bokeh_chart(ref_fig, use_container_width=True)
+
+
 
             
             
